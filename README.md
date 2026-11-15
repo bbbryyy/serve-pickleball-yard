@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Serve Pickleball Yard — Court booking
 
-## Getting Started
+Players book courts by the hour and pay with GCash or Maya QR. Staff check payments by hand. Admins also get sales reports and analytics.
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router) · Supabase (Postgres, Auth, Storage) · Tailwind CSS 4 · Recharts
+
+## Run locally
+
+Requires Node 20+, Docker, and the Supabase CLI.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+supabase start                 # local Postgres/Auth/Storage in Docker
+supabase status -o env         # copy API_URL / ANON_KEY / SERVICE_ROLE_KEY into .env.local (see .env.example)
+supabase db reset              # applies supabase/migrations
+npm run seed                   # test admin + staff accounts, sample bookings for reports
+npm run dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The test backoffice accounts and their passwords are listed at the top of `scripts/seed.mjs`. They are for local use only.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test                       # schedule rules (hours, midnight, 24h notice, 8-week window)
+npm run check:permissions      # staff/admin/public database permissions (after seeding)
+npx tsc --noEmit && npx eslint .
+```
 
-## Learn More
+## How it fits together
 
-To learn more about Next.js, take a look at the following resources:
+| Area | Where |
+|---|---|
+| Schedule rules (shared by the UI and server) | `lib/schedule.ts` (the same rules are enforced again in SQL by `validate_slot`) |
+| Database: tables, booking RPCs, RLS, cron | `supabase/migrations/` |
+| Public site: home, booking grid, payment, status | `app/(public)/` |
+| Backoffice: bookings queue, schedule, reports, settings, users | `app/backoffice/` |
+| Auth guard | `proxy.ts` (redirect), `lib/auth.ts` (`requireStaff` / `requireAdmin`), and RLS/RPC role checks |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key rules:
+- **One active booking per court-hour** is enforced by a unique partial index (`booking_slots_one_active`), so two players can't book the same hour.
+- **Holds:** an online booking holds its slots for 30 minutes (set in Settings). If no payment proof arrives, the slots are released: right away for availability, and a cron job marks the booking expired every 5 minutes. Staff can extend a hold or revive an expired one.
+- **Service day:** a day runs from 4AM to 1AM. The 12AM–1AM slot belongs to the day before it, in the grid and in reports.
+- **Public pages never touch tables directly.** They call security-definer RPCs through the server with the service role. Staff use their own session, and every RPC re-checks `is_staff()` / `is_admin()`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploying
 
-## Deploy on Vercel
+1. Create a Supabase project and run `supabase link` and then `supabase db push`.
+2. Create the first admin: add the user in Supabase Auth, then insert a `staff_profiles` row with `role = 'admin'`. Add other users from the backoffice **Users** page.
+3. Deploy to Vercel with the three env vars from `.env.example`. Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+4. Upload the GCash and Maya QR codes in **Backoffice → Settings**.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Next phase (not built yet)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open play queue management: admins create sessions, staff import the player list from Reclub, then check players in and rotate games.

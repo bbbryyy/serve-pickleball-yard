@@ -1,26 +1,81 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Serve Pickleball Yard theme — colors sampled from the courts and logo */
+@theme {
+  --color-court: #1f5fbf;        /* court blue */
+  --color-court-dark: #16468f;
+  --color-court-deep: #0f2f63;
+  --color-kitchen: #a7adb5;      /* kitchen gray */
+  --color-kitchen-light: #e7e9ec;
+  --color-surround: #d98a4e;     /* orange surround */
+  --color-surround-dark: #b26a32;
+  --color-ball: #c8e63c;         /* ball lime */
+  --color-ball-dark: #2b3a00;
+  --color-steel: #2b2f36;        /* roof trusses */
+  --color-paper: #f4f5f7;
+
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: #1d2330;
 }
+
+/* white court-line frame used on blue panels */
+.court-lines {
+  position: relative;
+}
+.court-lines::before,
+.court-lines::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+.court-lines::before {
+  inset: 14px;
+  border: 3px solid rgb(255 255 255 / 0.55);
+}
+.court-lines::after {
+  top: 14px;
+  bottom: 14px;
+  left: 50%;
+  border-left: 3px solid rgb(255 255 255 / 0.55);
+}
+
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+@utility btn-primary {
+    @apply btn bg-surround text-white hover:bg-surround-dark;
+  }
+
+@utility btn-lime {
+    @apply btn bg-ball text-ball-dark hover:brightness-95;
+  }
+
+@utility btn-court {
+    @apply btn bg-court text-white hover:bg-court-dark;
+  }
+
+@utility btn-ghost {
+    @apply btn border border-kitchen bg-white text-steel hover:bg-kitchen-light;
+  }
+
+@utility input {
+    @apply w-full rounded-lg border border-kitchen bg-white px-3 py-2 text-sm outline-none focus:border-court focus:ring-2 focus:ring-court/25;
+  }
+
+@utility label {
+    @apply mb-1 block text-xs font-semibold tracking-wide text-steel/80 uppercase;
+  }
+
+@utility card {
+    @apply rounded-xl border border-kitchen-light bg-white;
+  }
