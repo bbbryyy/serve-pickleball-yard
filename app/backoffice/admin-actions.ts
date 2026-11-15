@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
@@ -50,6 +50,7 @@ export async function updateSettings(_prev: FormResult, form: FormData): Promise
   const supabase = await createUserClient(); // RLS: admins only
   const { error } = await supabase.from("settings").update(update).eq("id", true);
   if (error) return { error: "Couldn't save settings. Check the values and try again." };
+  updateTag("settings");
   revalidatePath("/", "layout");
   return { ok: "Settings saved" };
 }

@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { connection } from "next/server";
 import { HoursCards } from "@/components/HoursTable";
 import { HowToBook } from "@/components/HowToBook";
 import { OurCourts } from "@/components/OurCourts";
@@ -8,8 +7,11 @@ import { ContactUs } from "@/components/ContactUs";
 import { formatHour, formatPeso } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 
+// The home page only shows hours, rates, and courts, so it's prebuilt and
+// refreshed every 5 minutes (and right away when Settings are saved).
+export const revalidate = 300;
+
 export default async function HomePage() {
-  await connection();
   const { rules, courts } = await getSiteSettings();
 
   return (

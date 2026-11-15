@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { DEFAULT_RULES, type BookingRules } from "./schedule";
 import { createServiceClient } from "./supabase/server";
 
@@ -16,7 +17,18 @@ export function publicStorageUrl(bucket: string, path: string | null): string | 
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-export async function getSiteSettings(): Promise<SiteSettings> {
+/**
+ * Settings and courts rarely change, so they're cached for 5 minutes instead
+ * of being fetched on every page view (the database can be a long round trip
+ * from the web servers). Saving Settings clears the cache immediately via the
+ * "settings" tag. Live data such as availability is never cached.
+ */
+export const getSiteSettings = unstable_cache(loadSiteSettings, ["site-settings"], {
+  tags: ["settings"],
+  revalidate: 300,
+});
+
+async function loadSiteSettings(): Promise<SiteSettings> {
   const db = createServiceClient();
   const [{ data: s }, { data: courts }] = await Promise.all([
     db.from("settings").select("*").single(),
