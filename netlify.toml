@@ -1,0 +1,10 @@
+# Netlify build settings (read automatically on every deploy).
+# Netlify detects Next.js and adds its Next.js runtime, which serves the
+# server-rendered pages, server actions, and proxy from the .next output.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 needs Node 20.9 or newer
+  NODE_VERSION = "22"
