@@ -9,7 +9,7 @@ export type QueueBooking = {
   id: string;
   ref: string;
   playerName: string;
-  mobile: string;
+  mobile: string | null;
   email: string | null;
   court: string;
   slots: string[];
@@ -47,7 +47,7 @@ export function BookingRow({ b }: { b: QueueBooking }) {
           </p>
           <p className="mt-0.5 font-semibold text-steel">{b.playerName}</p>
           <p className="text-xs text-steel/60">
-            <a href={`tel:${b.mobile}`} className="hover:underline">{b.mobile}</a>
+            {b.mobile ? <a href={`tel:${b.mobile}`} className="hover:underline">{b.mobile}</a> : "No mobile"}
             {b.email && <> · {b.email}</>}
           </p>
         </div>

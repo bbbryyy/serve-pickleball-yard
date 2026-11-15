@@ -16,6 +16,7 @@ export function friendlyError(message: string | undefined): string {
   if (m.startsWith("forbidden")) return "Your account doesn't have access to do that.";
   if (m.startsWith("not_found")) return "Booking not found.";
   if (m.includes("bookings_mobile_check")) return "Enter a valid PH mobile number (09XXXXXXXXX).";
+  if (m.includes("bookings_mobile_required")) return "Enter a mobile number. It's only optional for walk-ins paying cash.";
   if (m.includes("bookings_email_check")) return "Enter a valid email address.";
   if (m.includes("bookings_player_name_check")) return "Enter your full name.";
   return "Something went wrong. Try again.";

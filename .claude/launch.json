@@ -1,7 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
-    { "name": "mock", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4321", "--bind", "127.0.0.1", "--directory", "/private/tmp/claude-501/-Users-bmpaculan--claude-spares-spare-f63i1b/2278635e-692e-4b95-ab40-0f8bccea6be5/scratchpad/mock"], "port": 4321 }
+    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 }
   ]
 }

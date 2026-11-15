@@ -2,6 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { HoursCards } from "@/components/HoursTable";
+import { HowToBook } from "@/components/HowToBook";
+import { OurCourts } from "@/components/OurCourts";
+import { ContactUs } from "@/components/ContactUs";
 import { formatHour, formatPeso } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 
@@ -13,7 +16,7 @@ export default async function HomePage() {
     <>
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-court-deep text-white">
-        <Image src="/brand/court1.jpg" alt="" fill priority className="-z-10 object-cover opacity-45" sizes="100vw" />
+        <Image src="/brand/court.jpg" alt="" fill priority className="-z-10 object-cover opacity-45" sizes="100vw" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-court-deep via-court-deep/80 to-transparent" />
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <p className="font-display text-sm tracking-[0.25em] text-ball uppercase">Indoor pickleball · 2 courts</p>
@@ -45,28 +48,7 @@ export default async function HomePage() {
         <HoursCards rules={rules} />
       </section>
 
-      {/* Courts */}
-      <section id="courts" className="bg-surround/15 py-14">
-        <div className="mx-auto max-w-6xl scroll-mt-24 px-4">
-          <h2 className="mb-6 font-display text-3xl font-semibold text-steel uppercase">Our courts</h2>
-          <div className="grid gap-5 sm:grid-cols-2">
-            {courts.map((c) => (
-              <div key={c.id} className="overflow-hidden rounded-xl bg-surround p-3">
-                <div className="court-lines flex aspect-[2/1] flex-col items-center justify-center rounded bg-court text-white">
-                  <p className="relative z-10 font-display text-4xl font-bold uppercase">{c.name}</p>
-                  <p className="relative z-10 mt-1 text-sm text-white/80">Indoor · covered · LED lights</p>
-                </div>
-                <div className="flex items-center justify-between px-1 pt-3">
-                  <span className="font-semibold text-white">{formatPeso(rules.ratePerHour)} / hour</span>
-                  <Link href={`/book?court=${c.id}`} className="btn bg-white text-court hover:bg-paper">
-                    Book {c.name}
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <OurCourts courts={courts} ratePerHour={rules.ratePerHour} />
 
       {/* Coaching */}
       <section id="coaching" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-14">
@@ -109,30 +91,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-6xl px-4 py-14">
-        <h2 className="mb-6 font-display text-3xl font-semibold text-steel uppercase">How booking works</h2>
-        <ol className="grid gap-4 sm:grid-cols-4">
-          {[
-            ["Pick your hours", "Choose a court and the hours you want on the weekly schedule."],
-            ["Reserve", `Enter your name and mobile number. We hold the slot for ${rules.holdMinutes} minutes.`],
-            ["Pay via QR", "Scan our GCash or Maya QR, then upload your payment screenshot."],
-            ["Get confirmed", "Our staff checks your payment and confirms your booking."],
-          ].map(([title, body], i) => (
-            <li key={title} className="card p-5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ball font-display text-lg font-bold text-ball-dark">
-                {i + 1}
-              </span>
-              <p className="mt-3 font-semibold text-steel">{title}</p>
-              <p className="mt-1 text-sm text-steel/70">{body}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-xl bg-court p-5 text-white">
-          <p className="flex-1 text-lg font-semibold">Ready to play?</p>
-          <Link href="/book" className="btn-lime px-6 py-3">Book a court</Link>
-        </div>
-      </section>
+      <HowToBook holdMinutes={rules.holdMinutes} />
+
+      <ContactUs rules={rules} />
     </>
   );
 }

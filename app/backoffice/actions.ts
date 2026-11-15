@@ -58,8 +58,11 @@ export async function createWalkIn(input: {
   note?: string;
 }): Promise<ActionResult> {
   await requireStaff();
-  const mobile = normalizeMobile(input.mobile);
-  if (!/^09\d{9}$/.test(mobile)) return { error: "Enter a valid PH mobile number (09XXXXXXXXX)." };
+  // mobile is optional for walk-ins paying cash; required for GCash and Maya
+  const raw = input.mobile.trim();
+  const mobile = raw ? normalizeMobile(raw) : null;
+  if (!mobile && input.paymentMethod !== "cash") return { error: "Enter a mobile number for GCash or Maya payments." };
+  if (mobile && !/^09\d{9}$/.test(mobile)) return { error: "Enter a valid PH mobile number (09XXXXXXXXX)." };
   const supabase = await createUserClient();
   const { data, error } = await supabase.rpc("create_booking", {
     p_court_id: input.courtId,

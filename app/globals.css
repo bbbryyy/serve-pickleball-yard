@@ -79,3 +79,90 @@ body {
 @utility card {
     @apply rounded-xl border border-kitchen-light bg-white;
   }
+
+/* ---------------------------------------------------------------- Dink, the mascot (components/Dink.tsx) */
+.dink .dink-arm-l { transform-box: view-box; transform-origin: 46px 112px; transition: transform 0.35s ease; }
+.dink .dink-arm-r { transform-box: view-box; transform-origin: 154px 112px; transition: transform 0.35s ease; }
+.dink .dink-whole { transform-box: view-box; transform-origin: 100px 200px; }
+.dink .dink-eyes { transform-box: view-box; transform-origin: 100px 100px; }
+.dink .dink-shadow { transform-box: view-box; transform-origin: 100px 208px; }
+.dink .dink-pupils { transition: transform 0.3s ease; }
+.dink .dink-eyes-happy, .dink .dink-eyes-shut, .dink .dink-m-open, .dink .dink-m-o, .dink .dink-m-sleep,
+.dink .dink-zz, .dink .dink-confetti, .dink .dink-bubble { display: none; }
+
+/* idle and wave: gentle bob + blink */
+.dink--idle .dink-whole, .dink--wave .dink-whole { animation: dink-bob 2.4s ease-in-out infinite; }
+.dink--idle .dink-eyes, .dink--wave .dink-eyes, .dink--think .dink-eyes { animation: dink-blink 4s infinite; }
+.dink--wave .dink-arm-r { animation: dink-wave 0.5s ease-in-out infinite alternate; }
+
+/* cheer: jump with arms up and confetti */
+.dink--cheer .dink-whole { animation: dink-jump 0.7s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.dink--cheer .dink-shadow { animation: dink-shadow 0.7s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.dink--cheer .dink-arm-l { transform: rotate(127deg); }
+.dink--cheer .dink-arm-r { transform: rotate(-127deg); }
+.dink--cheer .dink-confetti { display: block; }
+.dink--cheer .dink-confetti rect { animation: dink-fall 1.4s linear infinite; }
+.dink--cheer .dink-eyes-open, .dink--sleep .dink-eyes-open { display: none; }
+.dink--cheer .dink-eyes-happy { display: block; }
+.dink--cheer .dink-m-smile, .dink--think .dink-m-smile, .dink--sleep .dink-m-smile { display: none; }
+.dink--cheer .dink-m-open { display: block; }
+
+/* think: sway, look up, typing bubble */
+.dink--think .dink-whole { animation: dink-tilt 1.6s ease-in-out infinite; }
+.dink--think .dink-pupils { transform: translate(-4px, -5px); }
+.dink--think .dink-m-o { display: block; }
+.dink--think .dink-arm-l { transform: rotate(-55deg); }
+.dink--think .dink-bubble { display: block; }
+.dink--think .dink-dot { animation: dink-dot 1.2s infinite; }
+.dink--think .dink-dot:nth-of-type(2) { animation-delay: 0.2s; }
+.dink--think .dink-dot:nth-of-type(3) { animation-delay: 0.4s; }
+
+/* sleep: breathing, floating Zs */
+.dink--sleep .dink-whole { animation: dink-breathe 3.2s ease-in-out infinite; }
+.dink--sleep .dink-eyes-shut, .dink--sleep .dink-m-sleep, .dink--sleep .dink-zz { display: block; }
+.dink--sleep .dink-zz text { animation: dink-zz 3s ease-in infinite; }
+.dink--sleep .dink-zz text:nth-child(2) { animation-delay: 1s; }
+.dink--sleep .dink-zz text:nth-child(3) { animation-delay: 2s; }
+
+@keyframes dink-bob { 50% { transform: translateY(-5px); } }
+@keyframes dink-blink { 0%, 46%, 50%, 100% { transform: scaleY(1); } 48% { transform: scaleY(0.1); } }
+@keyframes dink-wave { from { transform: rotate(-105deg); } to { transform: rotate(-150deg); } }
+@keyframes dink-jump {
+  0%, 100% { transform: translateY(0) scale(1.06, 0.94); }
+  15% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-26px) scale(0.97, 1.03); }
+}
+@keyframes dink-shadow { 0%, 100% { transform: scaleX(1); opacity: 0.25; } 50% { transform: scaleX(0.6); opacity: 0.12; } }
+@keyframes dink-fall { from { transform: translateY(-10px) rotate(0); } to { transform: translateY(60px) rotate(260deg); opacity: 0; } }
+@keyframes dink-tilt { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes dink-dot { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@keyframes dink-breathe { 50% { transform: scale(1.025, 0.975); } }
+@keyframes dink-zz { 0% { opacity: 0; transform: translate(0, 8px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(12px, -26px); } }
+
+/* still poses for visitors who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .dink *, .dink { animation: none !important; transition: none !important; }
+  .dink--wave .dink-arm-r { transform: rotate(-125deg); }
+}
+
+/* ---------------------------------------------------------------- menu links: smooth scroll + section entrance */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* the section's blocks rise into place one after another */
+.section-enter > * > * {
+  animation: section-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.section-enter > * > *:nth-child(2) { animation-delay: 0.1s; }
+.section-enter > * > *:nth-child(3) { animation-delay: 0.2s; }
+.section-enter > * > *:nth-child(4) { animation-delay: 0.3s; }
+.section-enter > * > *:nth-child(n + 5) { animation-delay: 0.4s; }
+
+@keyframes section-rise {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}

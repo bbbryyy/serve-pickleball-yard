@@ -29,7 +29,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/backoff
 
   const details: Record<string, SlotDetail> = {};
   for (const s of slots ?? []) {
-    const b = s.bookings as unknown as { id: string; ref: string; player_name: string; mobile: string; status: string; source: string; total_amount: number; hold_expires_at: string | null };
+    const b = s.bookings as unknown as { id: string; ref: string; player_name: string; mobile: string | null; status: string; source: string; total_amount: number; hold_expires_at: string | null };
     if (b.status === "pending_payment" && b.hold_expires_at && new Date(b.hold_expires_at) < new Date()) continue;
     const { serviceDate, sh } = serviceSlotOf(new Date(s.slot_start), rules);
     details[`${serviceDate}|${sh}`] = { kind: "booking", ref: b.ref, name: b.player_name, mobile: b.mobile, status: b.status, source: b.source, total: b.total_amount };

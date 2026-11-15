@@ -7,7 +7,7 @@ import { formatPeso, groupSlots, type BookingRules } from "@/lib/schedule";
 import { blockSlots, createWalkIn, unblockSlots, type ActionResult } from "../../actions";
 
 export type SlotDetail =
-  | { kind: "booking"; ref: string; name: string; mobile: string; status: string; source: string; total: number }
+  | { kind: "booking"; ref: string; name: string; mobile: string | null; status: string; source: string; total: number }
   | { kind: "block" | "open_play"; reason: string };
 
 const STATUS: Record<string, string> = { pending_payment: "Waiting for payment", for_verification: "For verification", confirmed: "Confirmed" };
@@ -108,7 +108,13 @@ export function ScheduleBoard({
             <h2 className="font-display text-xl font-semibold text-steel uppercase">Booking</h2>
             <p className="font-mono text-sm font-semibold">{focused.ref}</p>
             <p className="font-semibold text-steel">{focused.name}</p>
-            <p className="text-sm"><a className="text-court hover:underline" href={`tel:${focused.mobile}`}>{focused.mobile}</a></p>
+            <p className="text-sm">
+              {focused.mobile ? (
+                <a className="text-court hover:underline" href={`tel:${focused.mobile}`}>{focused.mobile}</a>
+              ) : (
+                <span className="text-steel/60">No mobile</span>
+              )}
+            </p>
             <p className="text-sm text-steel/70">{STATUS[focused.status] ?? focused.status} · {focused.source === "walk_in" ? "Walk-in" : "Online"} · {formatPeso(focused.total)}</p>
             <a className="btn-ghost w-full" href={`/backoffice?status=${focused.status}&q=${focused.ref}`}>Open in bookings</a>
             <button className="text-xs text-steel/60 underline" onClick={() => setFocus(null)}>Close</button>
@@ -131,7 +137,7 @@ export function ScheduleBoard({
             <div className="space-y-2 border-t border-kitchen-light pt-3">
               <p className="label">Walk-in or phone reservation</p>
               <input className="input" placeholder="Player name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input className="input" placeholder="Mobile (09XXXXXXXXX)" inputMode="tel" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
+              <input className="input" placeholder={form.paymentMethod === "cash" ? "Mobile (optional for cash)" : "Mobile (09XXXXXXXXX)"} inputMode="tel" value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
               <select className="input" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value as typeof form.paymentMethod })}>
                 <option value="cash">Paid cash</option>
                 <option value="gcash">Paid GCash</option>
