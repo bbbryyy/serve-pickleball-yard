@@ -1,6 +1,6 @@
 # Serve Pickleball Yard — Court Booking PRD
 
-Last updated: Nov 18, 2026 · Living version: https://claude.ai/artifact/QcqZbwm8pHWDE2eQuzZgUL
+Last updated: Nov 18, 2026 (store added) · Living version: https://claude.ai/artifact/QcqZbwm8pHWDE2eQuzZgUL
 
 ## Overview
 
@@ -248,6 +248,27 @@ Players register for open play in Reclub. Our site handles the money: each sessi
 **Checking payments:** open play payments appear in the Bookings list with an Open play tag and count in the sidebar badge. Approve, reject, and extend hold work as for bookings.
 
 **Next: game queue (not started).** A "who's up next" board for a TV and court assignment as courts free up. The rotation rules still need to be decided.
+
+## Store
+
+A simple POS for the court store: drinks, chocolate bars, cup noodles, nachos and other quick-serve food. No receipts. Design: `docs/superpowers/specs/2026-11-18-store-pos-design.md`.
+
+**Staff (`/backoffice/store`)**
+
+- **Sell:** tap item buttons (price and stock shown; low and sold-out flagged) into a sale, pick Cash, GCash or Maya, save. Today's sales are listed and can be cancelled the same day, which puts the items back in stock.
+- **Restock:** item, quantity, total paid, and paid from (owner, drawer, GCash, Maya). Paid from the drawer counts as cash out. Staff never see costs.
+- **Cash out:** money taken from the drawer for anything else, with a reason.
+- **Close day:** one close per day for all desk money. Expected cash = store cash sales + cash court walk-ins + cash open play walk-ins − cash out. GCash and Maya also include online booking and open play payments approved that day. Staff enter what they counted; differences are saved and the day is locked.
+- The Store menu badge counts low-stock items and earlier days nobody closed.
+
+**Admins**
+
+- **Items:** shelf items (counted, with a low-stock level) and made-to-order items (fixed cost per serving and selling price).
+- **Stock:** counts, average cost, stock value, history per item, and corrections (expired, damaged, given away, count fix). Opening stock is entered once with an estimated cost.
+- **Past closes:** expected vs counted per method; reopen a day to add a missed sale or fix a mistake (it must be counted and closed again).
+- **Store report:** revenue, cost, profit after losses, margin per item, payment methods, low stock, losses. The Sales page shows Store next to court rentals and open play, and the CSV has `store` rows.
+
+Profit uses the average cost at the time of each sale, so later price changes never change past profit.
 
 ## Open questions
 
