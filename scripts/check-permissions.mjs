@@ -21,3 +21,12 @@ show("staff read bookings", await staff.from("bookings").select("ref").limit(1))
 show("anon read bookings", await pub.from("bookings").select("ref").limit(1));
 show("anon get_availability", await pub.rpc("get_availability", { p_court_id: 1, p_from: new Date().toISOString(), p_to: new Date(Date.now() + 864e5).toISOString() }));
 show("anon create_booking", await pub.rpc("create_booking", { p_court_id: 1, p_slots: [], p_player_name: "x", p_mobile: "09171234567" }));
+// Open play
+show("staff update open play fee", await staff.from("settings").update({ open_play_fee: 1 }).eq("id", true).select());
+show("staff direct update open_play_payments", await staff.from("open_play_payments").update({ status: "confirmed" }).eq("status", "pending_payment").select());
+show("anon read open_play_payments", await pub.from("open_play_payments").select("ref").limit(1));
+show("anon read open_play_players", await pub.from("open_play_players").select("name").limit(1));
+show("anon staff_create_open_play_session", await pub.rpc("staff_create_open_play_session", { p_slots: [], p_court_ids: [1] }));
+show("anon create_open_play_payment", await pub.rpc("create_open_play_payment", { p_code: "X", p_player_names: ["Ab"], p_mobile: "09171234567" }));
+show("anon get_open_play_public", await pub.rpc("get_open_play_public", { p_code: "X" }));
+show("staff mark refunded (not found → passes role)", await staff.rpc("staff_mark_open_play_refunded", { p_payment_id: "00000000-0000-0000-0000-000000000000" }));

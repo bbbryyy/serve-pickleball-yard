@@ -300,6 +300,84 @@ try {
     const { data: rows } = await anon.from("open_play_payments").select("id").limit(1);
     assert.ok(!rows || rows.length === 0);
   });
+
+  // ================================================================ Task 3: cancel, refunds, reports
+  const D6 = addDays(manilaToday, 19);
+  const submit = (ref) => db.rpc("submit_open_play_payment", { p_ref: ref, p_method: "gcash", p_payment_ref_no: "998877", p_proof_path: `${ref}/x.png` });
+  const approve = (id) => staff.rpc("staff_review_open_play_payment", { p_payment_id: id, p_action: "approve", p_note: null });
+  const statusOf = async (id) => (await db.from("open_play_payments").select("status").eq("id", id).single()).data.status;
+  const report = async (from, to) => {
+    const { data, error } = await admin.rpc("report_summary", { p_from: from, p_to: to });
+    if (error) throw new Error(error.message);
+    return data;
+  };
+
+  await test("cancel moves paid to refund_owed and frees court hours", async () => {
+    const s = await newSession(staff, slots(D6, 9, 11), [1, 2]);
+    const a = await payOk(s.code, ["Approved One"]);
+    await submit(a.ref);
+    assert.ifError((await approve(a.id)).error);
+    const v = await payOk(s.code, ["Sent Proof"]);
+    await submit(v.ref);
+    const w = await payOk(s.code, ["Still Paying"]);
+    await expectError(staff.rpc("staff_cancel_open_play_session", { p_session_id: s.id, p_reason: " " }), "reason_required");
+    const c = await staff.rpc("staff_cancel_open_play_session", { p_session_id: s.id, p_reason: "Typhoon" });
+    assert.ifError(c.error);
+    assert.equal(await statusOf(a.id), "refund_owed");
+    assert.equal(await statusOf(v.id), "refund_owed");
+    assert.equal(await statusOf(w.id), "cancelled");
+    const { count } = await db.from("blocked_slots").select("id", { count: "exact", head: true }).eq("session_id", s.id);
+    assert.equal(count, 0);
+    assert.equal((await publicSession(s.code)).state, "cancelled");
+    await expectError(staff.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: ["Too Late"], p_payment_method: "cash", p_mobile: null }), "session_cancelled");
+  });
+
+  await test("cannot cancel after start", async () => {
+    const { data: code } = await db.rpc("new_open_play_code");
+    const { data: started } = await db.from("open_play_sessions").insert({
+      code, service_date: manilaToday, starts_at: new Date(Date.now() - 3600e3).toISOString(),
+      ends_at: new Date(Date.now() + 3600e3).toISOString(), fee_per_player: 120, players_per_court: 12, note: "CHECK",
+    }).select().single();
+    createdSessions.push(started.id);
+    await expectError(staff.rpc("staff_cancel_open_play_session", { p_session_id: started.id, p_reason: "x" }), "session_started");
+  });
+
+  const D7 = addDays(manilaToday, 20);
+  await test("report keeps approved revenue and books refund as money out", async () => {
+    const s = await newSession(staff, slots(D7, 12, 13), [1]);
+    const a = await payOk(s.code, ["Juan Dela Cruz", "Ana Reyes", "Mark Santos"]);
+    await submit(a.ref);
+    assert.ifError((await approve(a.id)).error);
+    const v = await payOk(s.code, ["Never Checked"]);
+    await submit(v.ref);
+    const sumFor = (rows, date, key) => rows.filter((r) => r.date === date).reduce((t, r) => t + r[key], 0);
+
+    let r = await report(D7, D7);
+    assert.equal(sumFor(r.open_play, D7, "revenue"), 360);
+    assert.equal(sumFor(r.open_play, D7, "players"), 3);
+    const row = r.open_play_sessions.find((x) => x.session_id === s.id);
+    assert.equal(row.players, 3);
+    assert.equal(row.max_players, 12);
+
+    const owedBefore = (await report(D7, D7)).refunds_owed;
+    assert.ifError((await staff.rpc("staff_cancel_open_play_session", { p_session_id: s.id, p_reason: "Rain" })).error);
+    assert.equal((await report(D7, D7)).refunds_owed, owedBefore + 2);
+    assert.ifError((await staff.rpc("staff_mark_open_play_refunded", { p_payment_id: a.id })).error);
+    assert.ifError((await staff.rpc("staff_mark_open_play_refunded", { p_payment_id: v.id })).error);
+    await expectError(staff.rpc("staff_mark_open_play_refunded", { p_payment_id: v.id }), "invalid_status");
+
+    r = await report(D7, D7);
+    assert.equal(sumFor(r.open_play, D7, "revenue"), 360, "approved revenue stays on the session date");
+    assert.equal(r.refunds_owed, owedBefore);
+    const today = await report(manilaToday, manilaToday);
+    assert.equal(sumFor(today.open_play_refunds, manilaToday, "amount"), 360, "only the approved payment is money out");
+    assert.equal(sumFor(today.open_play_refunds, manilaToday, "players"), 3);
+  });
+
+  await test("staff cannot read report data", async () => {
+    const { error } = await staff.rpc("report_summary", { p_from: D6, p_to: D6 });
+    assert.ok(error);
+  });
 } finally {
   // ---- cleanup
   if (createdSessions.length) {
