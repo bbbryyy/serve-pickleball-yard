@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/backoffice/store", label: "Store", admin: false },
   { href: "/backoffice/reports/sales", label: "Sales", admin: true },
   { href: "/backoffice/reports/analytics", label: "Analytics", admin: true },
+  { href: "/backoffice/reports/store", label: "Store report", admin: true },
   { href: "/backoffice/settings", label: "Settings", admin: true },
   { href: "/backoffice/users", label: "Users", admin: true },
 ];

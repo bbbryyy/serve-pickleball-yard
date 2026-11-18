@@ -89,3 +89,13 @@ describe("rotateCourt", () => {
     expect([...o].sort()).toEqual(start);
   });
 });
+
+describe("salesSplit with the store", () => {
+  it("adds store revenue to the total and reports store profit", () => {
+    const r = salesSplit([{ revenue: 800, hours: 2 } as DailyRow], [], [], [
+      { date: "2026-11-18", method: "cash", revenue: 180, cost: 105 },
+      { date: "2026-11-18", method: "gcash", revenue: 100, cost: 60.5 },
+    ]);
+    expect(r).toMatchObject({ rentals: 800, store: 280, storeProfit: 114.5, total: 1080 });
+  });
+});

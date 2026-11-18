@@ -13,23 +13,24 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
   const sp = await searchParams;
   const { rules, courts } = await getSiteSettings();
   const range = resolveRange(sp, rules, "this-month");
-  const { daily, open_play: openPlay, open_play_refunds: refunds, open_play_sessions: sessions, refunds_owed: refundsOwed } = await getReport(range.from, range.to);
+  const { daily, open_play: openPlay, open_play_refunds: refunds, open_play_sessions: sessions, refunds_owed: refundsOwed, store } = await getReport(range.from, range.to);
 
-  const split = salesSplit(daily, openPlay, refunds);
+  const split = salesSplit(daily, openPlay, refunds, store);
   const revenue = split.total;
   const bookings = sum(daily, (r) => r.bookings);
   const sessionsHeld = sessions.filter((x) => x.status === "open" && x.players > 0).length;
-  const dates = [...new Set([...daily.map((r) => r.date), ...openPlay.map((r) => r.date), ...refunds.map((r) => r.date)])].sort().reverse();
+  const dates = [...new Set([...daily.map((r) => r.date), ...openPlay.map((r) => r.date), ...refunds.map((r) => r.date), ...store.map((r) => r.date)])].sort().reverse();
 
   // revenue rows from both kinds of sales, for the method and channel breakdowns
   type Line = { key: string; revenue: number; qty: number };
   const lines = (key: (r: { method: string; source: string }) => string): Line[] => [
     ...daily.map((r) => ({ key: key(r), revenue: r.revenue, qty: r.hours })),
     ...openPlay.map((r) => ({ key: key(r), revenue: r.revenue, qty: 0 })),
+    ...store.map((r) => ({ key: key({ method: r.method, source: "store" }), revenue: r.revenue, qty: 0 })),
   ];
   const breakdown = (rows: Line[], label: (k: string) => string) =>
     [...groupBy(rows, (r) => r.key)].map(([k, rs]) => ({ label: label(k), revenue: sum(rs, (r) => r.revenue), hours: sum(rs, (r) => r.qty) })).sort((a, b) => b.revenue - a.revenue);
-  const gross = split.rentals + split.openPlay;
+  const gross = split.rentals + split.openPlay + split.store;
 
   const tables = [
     {
@@ -40,7 +41,7 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
       total: split.rentals,
     },
     { title: "By payment method", rows: breakdown(lines((r) => r.method), (k) => METHOD[k] ?? k), total: gross },
-    { title: "By channel", rows: breakdown(lines((r) => r.source), (k) => (k === "walk_in" ? "Walk-in / phone" : "Online")), total: gross },
+    { title: "By channel", rows: breakdown(lines((r) => r.source), (k) => (k === "walk_in" ? "Walk-in / phone" : k === "store" ? "Store" : "Online")), total: gross },
   ];
 
   return (
@@ -49,7 +50,7 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
         <div>
           <h1 className="font-display text-3xl font-semibold text-steel uppercase">Sales report</h1>
           <p className="text-sm text-steel/60">
-            Court rentals and open play by play date · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}
+            Court rentals, open play and store by play date · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}
           </p>
         </div>
         <Link href={`/backoffice/reports/sales/export?from=${range.from}&to=${range.to}`} className="btn-ghost" prefetch={false}>
@@ -63,10 +64,11 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
           {refundsOwed} open play refund{refundsOwed === 1 ? "" : "s"} owed
         </Link>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Total" value={formatPeso(revenue)} sub={split.refunds ? `after ${formatPeso(split.refunds)} in refunds` : undefined} />
         <Metric label="Court rentals" value={formatPeso(split.rentals)} sub={`${split.rentalHours.toLocaleString()} hours · ${bookings.toLocaleString()} bookings`} />
         <Metric label="Open play" value={formatPeso(split.openPlay)} sub={`${split.players.toLocaleString()} players · ${sessionsHeld} session${sessionsHeld === 1 ? "" : "s"}`} />
+        <Metric label="Store" value={formatPeso(split.store)} sub={`${formatPeso(Math.round(split.storeProfit))} profit`} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -99,6 +101,7 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
               {courts.map((c) => <th key={c.id} className="py-1.5 text-right">{c.name}</th>)}
               <th className="py-1.5 text-right">Hours</th>
               <th className="py-1.5 text-right">Open play</th>
+              <th className="py-1.5 text-right">Store</th>
               <th className="py-1.5 text-right">Refunds</th>
               <th className="py-1.5 text-right">Total</th>
             </tr>
@@ -109,6 +112,7 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
               const op = sum(openPlay.filter((r) => r.date === date), (r) => r.revenue);
               const players = sum(openPlay.filter((r) => r.date === date), (r) => r.players);
               const rf = sum(refunds.filter((r) => r.date === date), (r) => r.amount);
+              const sto = sum(store.filter((r) => r.date === date), (r) => r.revenue);
               return (
                 <tr key={date} className="border-t border-kitchen-light">
                   <td className="py-1.5">{formatServiceDate(date)}</td>
@@ -117,12 +121,13 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
                   ))}
                   <td className="py-1.5 text-right">{sum(rows, (r) => r.hours)}</td>
                   <td className="py-1.5 text-right text-steel/70">{op ? `${formatPeso(op)} · ${players}p` : "—"}</td>
+                  <td className="py-1.5 text-right text-steel/70">{sto ? formatPeso(sto) : "—"}</td>
                   <td className="py-1.5 text-right text-red-700">{rf ? `−${formatPeso(rf)}` : ""}</td>
-                  <td className="py-1.5 text-right font-semibold">{formatPeso(sum(rows, (r) => r.revenue) + op - rf)}</td>
+                  <td className="py-1.5 text-right font-semibold">{formatPeso(sum(rows, (r) => r.revenue) + op + sto - rf)}</td>
                 </tr>
               );
             })}
-            {dates.length === 0 && <tr><td className="py-3 text-steel/60" colSpan={courts.length + 5}>No sales in this range.</td></tr>}
+            {dates.length === 0 && <tr><td className="py-3 text-steel/60" colSpan={courts.length + 6}>No sales in this range.</td></tr>}
           </tbody>
         </table>
       </div>
