@@ -84,12 +84,12 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
         <h2 className="text-sm font-bold text-steel uppercase">Peak hours</h2>
         <p className="mb-3 text-xs text-steel/60">Hours booked by day of week and start time. Darker means busier.</p>
         <div className="overflow-x-auto">
-          <table className="border-separate border-spacing-[3px] text-[11px]">
+          <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-[3px] text-[11px]">
             <thead>
               <tr>
-                <th />
+                <th className="w-10" />
                 {hrs.map((h) => (
-                  <th key={h} className="min-w-[30px] font-normal text-steel/60">{formatHour(h).replace("AM", "a").replace("PM", "p")}</th>
+                  <th key={h} className="font-normal text-steel/60">{formatHour(h).replace("AM", "a").replace("PM", "p")}</th>
                 ))}
               </tr>
             </thead>
