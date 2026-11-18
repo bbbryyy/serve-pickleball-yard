@@ -7,6 +7,7 @@ import type { ActionResult } from "../../../actions";
 import { closeDay } from "../../../store-actions";
 
 type Src = { cash?: number; gcash?: number; maya?: number };
+export type Late = Money3;
 export type Expected = Money3 & {
   breakdown: { store: Src; court_walk_in: Src; open_play_walk_in: Src; online_court: Src; online_open_play: Src; cash_outs: number };
 };
@@ -28,7 +29,23 @@ function parts(e: Expected, m: keyof Money3) {
 const diffText = (n: number) => (n === 0 ? "₱0" : n > 0 ? `+${formatPeso(n)}` : `−${formatPeso(-n)}`);
 const diffCls = (n: number) => (n === 0 ? "text-ball-dark" : "text-red-700");
 
-export function CloseForm({ date, label, expected, closed, close }: { date: string; label: string; expected: Expected; closed: boolean; close: Record<string, unknown> | null }) {
+export function CloseForm({
+  date,
+  label,
+  isToday,
+  expected,
+  closed,
+  close,
+  late,
+}: {
+  date: string;
+  label: string;
+  isToday: boolean;
+  expected: Expected;
+  closed: boolean;
+  close: Record<string, unknown> | null;
+  late: Late | null;
+}) {
   const [counted, setCounted] = useState<Record<keyof Money3, string>>({ cash: "", gcash: "", maya: "" });
   const [note, setNote] = useState("");
   const [result, setResult] = useState<ActionResult>({});
@@ -53,7 +70,17 @@ export function CloseForm({ date, label, expected, closed, close }: { date: stri
           </tbody>
         </table>
         {c.note ? <p className="mt-3 text-sm text-steel/70">Note: {String(c.note)}</p> : null}
-        <p className="mt-3 text-xs text-steel/60">To add a missed sale or fix a mistake, an admin can reopen this day from Past closes.</p>
+        {late && (late.cash || late.gcash || late.maya) ? (
+          <p className="mt-3 rounded-md bg-surround/15 px-3 py-2 text-sm text-surround-dark">
+            Recorded after this day was closed:{" "}
+            {methods.filter(([m]) => late[m]).map(([m, l]) => `${l} ${diffText(late[m])}`).join(", ")}. This money isn&apos;t in the count above. An admin can reopen the day so it can be counted again.
+          </p>
+        ) : null}
+        <p className="mt-3 text-xs text-steel/60">
+          {isToday
+            ? "To add a missed sale or recount, an admin can reopen today from Past closes."
+            : "If the count was wrong, an admin can reopen this day from Past closes so it can be counted again. Ring up a missed sale today."}
+        </p>
       </div>
     );
   }

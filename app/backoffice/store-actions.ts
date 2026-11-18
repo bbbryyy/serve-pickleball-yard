@@ -100,5 +100,5 @@ export async function reopenDay(closeId: string): Promise<ActionResult> {
   const r = await call("admin_reopen_day", { p_close_id: closeId });
   if (r.error) return { error: r.error };
   refresh();
-  return { ok: "Day reopened. Staff can sell, cancel and close it again." };
+  return { ok: "Day reopened. Count and close it again. If it's today, staff can also sell and cancel again." };
 }

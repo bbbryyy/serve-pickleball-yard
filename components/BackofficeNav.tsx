@@ -34,7 +34,7 @@ export function BackofficeNav({ isAdmin, pendingCount, storeAlerts = 0 }: { isAd
               <span className="rounded-full bg-surround px-2 text-xs text-white">{pendingCount}</span>
             )}
             {i.href === "/backoffice/store" && storeAlerts > 0 && (
-              <span className="rounded-full bg-surround px-2 text-xs text-white" title="Low stock and days not closed">{storeAlerts}</span>
+              <span className="rounded-full bg-surround px-2 text-xs text-white" title="Low stock, days not closed, or money recorded after a close">{storeAlerts}</span>
             )}
           </Link>
         );

@@ -351,7 +351,8 @@ begin
            'maya',  coalesce(sum(total_amount) filter (where payment_method = 'maya'), 0))
     into cw from public.bookings b
    where b.source = 'walk_in' and b.status = 'confirmed'
-     and (public.service_slot(date_trunc('hour', b.created_at), s)).service_date = p_date;
+     -- paid at the desk when they play, so counted on the play date (phone reservations too)
+     and (public.service_slot((select min(bs.slot_start) from public.booking_slots bs where bs.booking_id = b.id), s)).service_date = p_date;
 
   select jsonb_build_object(
            'cash',  coalesce(sum(total_amount) filter (where payment_method = 'cash'), 0),
@@ -389,27 +390,64 @@ end $$;
 
 create or replace function public.store_day_status(p_date date) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
-declare c public.store_daily_closes;
+declare c public.store_daily_closes; e jsonb;
 begin
   if not public.is_staff() then raise exception 'forbidden'; end if;
   select * into c from public.store_daily_closes
    where service_date = p_date and reopened_at is null order by closed_at desc limit 1;
-  return jsonb_build_object('closed', c.id is not null, 'close', case when c.id is not null then to_jsonb(c) end);
+  if c.id is null then
+    return jsonb_build_object('closed', false, 'close', null, 'late', null);
+  end if;
+  -- money recorded for this day after it was closed (e.g. a walk-in entered later)
+  e := public.store_day_expected(p_date);
+  return jsonb_build_object('closed', true, 'close', to_jsonb(c),
+    'late', jsonb_build_object('cash', (e->>'cash')::int - c.expected_cash,
+                               'gcash', (e->>'gcash')::int - c.expected_gcash,
+                               'maya', (e->>'maya')::int - c.expected_maya));
+end $$;
+
+-- Closed days (last 30) whose desk money changed after they were closed.
+create or replace function public.store_late_days() returns date[]
+language plpgsql stable security definer set search_path = '' as $$
+declare v_today date := public.current_store_day(); v date[];
+begin
+  if not public.is_staff() then raise exception 'forbidden'; end if;
+  select coalesce(array_agg(c.service_date order by c.service_date), '{}') into v
+    from public.store_daily_closes c
+   where c.reopened_at is null and c.service_date between v_today - 30 and v_today
+     and c.closed_at = (select max(c2.closed_at) from public.store_daily_closes c2
+                         where c2.service_date = c.service_date and c2.reopened_at is null)
+     and (select (e->>'cash')::int <> c.expected_cash or (e->>'gcash')::int <> c.expected_gcash
+                 or (e->>'maya')::int <> c.expected_maya
+            from (select public.store_day_expected(c.service_date) as e) x);
+  return v;
 end $$;
 
 -- Earlier days (last 30) with desk activity that nobody closed.
 create or replace function public.store_unclosed_days() returns date[]
 language plpgsql stable security definer set search_path = '' as $$
-declare v_today date := public.current_store_day(); v date[];
+declare v_today date := public.current_store_day(); v date[]; v_start date;
 begin
   if not public.is_staff() then raise exception 'forbidden'; end if;
+  -- only days since the store started being used (its first item), not older walk-ins
+  select (public.service_slot(date_trunc('hour', min(i.created_at)), st)).service_date into v_start
+    from public.store_items i, public.settings st group by st.*;
+  if v_start is null then return '{}'; end if;
   select coalesce(array_agg(d order by d), '{}') into v from (
     select distinct service_date d from public.store_sales
      where service_date between v_today - 30 and v_today - 1
     union
     select distinct service_date from public.store_cash_outs
      where service_date between v_today - 30 and v_today - 1
-  ) x where not public.store_day_closed(x.d);
+    union
+    select distinct (public.service_slot((select min(bs.slot_start) from public.booking_slots bs where bs.booking_id = b.id), st)).service_date
+      from public.bookings b, public.settings st
+     where b.source = 'walk_in' and b.status = 'confirmed' and b.created_at > now() - interval '32 days'
+    union
+    select distinct (public.service_slot(date_trunc('hour', p.created_at), st)).service_date
+      from public.open_play_payments p, public.settings st
+     where p.source = 'walk_in' and p.verified_at is not null and p.created_at > now() - interval '32 days'
+  ) x where x.d between greatest(v_today - 30, v_start) and v_today - 1 and not public.store_day_closed(x.d);
   return v;
 end $$;
 

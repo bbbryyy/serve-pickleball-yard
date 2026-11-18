@@ -45,7 +45,6 @@ async function expectError(promise, prefix) {
 
 const { data: today } = await db.rpc("current_store_day");
 const made = { items: [], sales: [], closes: [], cashOuts: [], bookings: [], sessions: [] };
-const pad = (n) => String(n).padStart(2, "0");
 function addDays(date, n) {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
@@ -60,6 +59,10 @@ const onHand = async (id) => (await ok(admin.rpc("admin_store_stock"))).find((r)
 const sell = (client, lines, method = "cash") => client.rpc("store_create_sale", { p_lines: lines, p_method: method });
 
 let gat, nachos;
+// the checks sell today: set aside any local close of today and restore it afterwards
+const { data: openCloses } = await db.from("store_daily_closes").select("id").eq("service_date", today).is("reopened_at", null);
+const setAside = (openCloses ?? []).map((c) => c.id);
+if (setAside.length) await db.from("store_daily_closes").update({ reopened_at: new Date().toISOString() }).in("id", setAside);
 
 try {
   await test("admin manages items; staff can't", async () => {
@@ -152,9 +155,32 @@ try {
     made.sessions.push(ses.id);
     await ok(staff.rpc("staff_add_open_play_walkins", { p_session_id: ses.id, p_player_names: ["CHECK Walker"], p_payment_method: "cash", p_mobile: null }));
     const e1 = await ok(staff.rpc("store_day_expected", { p_date: today }));
-    assert.equal(e1.cash - e0.cash, 160 + 400 + ses.fee_per_player - 50 - 100);
+    // the court booking is for a later day: it's paid when they play, so it isn't in today's cash
+    assert.equal(e1.cash - e0.cash, 160 + ses.fee_per_player - 50 - 100);
     assert.equal(e1.breakdown.cash_outs - e0.breakdown.cash_outs, 150);
-    assert.equal(e1.breakdown.court_walk_in.cash - e0.breakdown.court_walk_in.cash, 400);
+    assert.equal(e1.breakdown.court_walk_in.cash - e0.breakdown.court_walk_in.cash, 0);
+    const later = await ok(staff.rpc("store_day_expected", { p_date: addDays(today, 14) }));
+    assert.ok(later.breakdown.court_walk_in.cash >= 400, "walk-in counted on its play date");
+  });
+
+  await test("days with only walk-in money are flagged as not closed", async () => {
+    const code = await ok(staff.rpc("staff_create_open_play_session", { p_slots: [new Date(`${addDays(today, 16)}T09:00:00+08:00`).toISOString()], p_court_ids: [1], p_note: "CHECK" }));
+    const { data: ses } = await db.from("open_play_sessions").select("id").eq("code", code).single();
+    made.sessions.push(ses.id);
+    const ref = await ok(staff.rpc("staff_add_open_play_walkins", { p_session_id: ses.id, p_player_names: ["CHECK Early"], p_payment_method: "cash", p_mobile: null }));
+    const old = new Date(`${addDays(today, -3)}T15:00:00+08:00`).toISOString();
+    await db.from("open_play_payments").update({ created_at: old }).eq("ref", ref);
+    // before the store existed, walk-in days aren't flagged
+    let days = await ok(staff.rpc("store_unclosed_days"));
+    const { data: firstItem } = await db.from("store_items").select("created_at").order("created_at").limit(1).single();
+    if (firstItem.created_at > old) assert.ok(!days.includes(addDays(today, -3)), "flagged a day before the store started");
+    // once the store started earlier, the walk-in day is flagged
+    const realStart = firstItem.created_at;
+    await db.from("store_items").update({ created_at: new Date(`${addDays(today, -10)}T10:00:00+08:00`).toISOString() }).eq("id", gat);
+    days = await ok(staff.rpc("store_unclosed_days"));
+    await db.from("store_items").update({ created_at: new Date().toISOString() }).eq("id", gat);
+    assert.ok(days.includes(addDays(today, -3)), `expected ${addDays(today, -3)} in ${days}`);
+    void realStart;
   });
 
   await test("closing locks the day until an admin reopens it", async () => {
@@ -171,6 +197,16 @@ try {
     const { data: rows } = await db.from("store_daily_closes").select("id, reopened_at").eq("service_date", today).in("id", made.closes);
     assert.equal(rows.length, 2);
     assert.equal((await ok(staff.rpc("store_day_status", { p_date: today }))).closed, true);
+    // money recorded after the close shows up as late money on the close
+    const code = await ok(staff.rpc("staff_create_open_play_session", { p_slots: [new Date(`${addDays(today, 17)}T09:00:00+08:00`).toISOString()], p_court_ids: [1], p_note: "CHECK" }));
+    const { data: ses } = await db.from("open_play_sessions").select("id, fee_per_player").eq("code", code).single();
+    made.sessions.push(ses.id);
+    await ok(staff.rpc("staff_add_open_play_walkins", { p_session_id: ses.id, p_player_names: ["CHECK Late"], p_payment_method: "cash", p_mobile: null }));
+    const st = await ok(staff.rpc("store_day_status", { p_date: today }));
+    assert.equal(st.late.cash, ses.fee_per_player, "late cash after close");
+    assert.equal(st.late.gcash, 0);
+    const alerts = await ok(staff.rpc("store_late_days"));
+    assert.ok(alerts.includes(today), "late money flags the day");
     await ok(admin.rpc("admin_reopen_day", { p_close_id: c2 })); // leave today open for manual testing
   });
 
@@ -198,6 +234,7 @@ try {
   await db.from("store_cash_outs").delete().or(`reason.like.CHECK%,reason.like.Restock: CHECK%`);
   if (made.closes.length) await db.from("store_daily_closes").delete().in("id", made.closes);
   if (made.bookings.length) await db.from("bookings").delete().in("ref", made.bookings);
+  if (setAside.length) await db.from("store_daily_closes").update({ reopened_at: null }).in("id", setAside);
   if (made.sessions.length) {
     await db.from("blocked_slots").delete().in("session_id", made.sessions);
     await db.from("open_play_sessions").delete().in("id", made.sessions);

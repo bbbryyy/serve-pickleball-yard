@@ -26,7 +26,7 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
             {user.fullName} · <span className="font-semibold text-ball uppercase">{user.role}</span>
           </div>
         </div>
-        <BackofficeNav isAdmin={user.role === "admin"} pendingCount={count} storeAlerts={store.low + store.unclosed.length} />
+        <BackofficeNav isAdmin={user.role === "admin"} pendingCount={count} storeAlerts={store.low + store.unclosed.length + store.late.length} />
         <form action={signOut} className="mt-3 lg:absolute lg:bottom-4 lg:left-4 lg:right-4">
           <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-white/60 hover:bg-white/10 hover:text-white">Sign out</button>
         </form>

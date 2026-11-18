@@ -9,11 +9,20 @@ const diffText = (n: number) => (n === 0 ? "₱0" : n > 0 ? `+${formatPeso(n)}` 
 export default async function ClosesPage() {
   await requireAdmin();
   const supabase = await createUserClient();
-  const [{ data, error }, { data: staff }] = await Promise.all([
+  const [{ data, error }, { data: staff }, { data: lateDays }] = await Promise.all([
     supabase.from("store_daily_closes").select("*").order("service_date", { ascending: false }).order("closed_at", { ascending: false }).limit(90),
     supabase.from("staff_profiles").select("user_id, full_name"),
+    supabase.rpc("store_late_days"),
   ]);
   if (error) throw new Error(error.message);
+  // money recorded after closing, for the days that have some
+  const late = new Map<string, { cash: number; gcash: number; maya: number }>();
+  await Promise.all(
+    ((lateDays ?? []) as string[]).map(async (d) => {
+      const { data: st } = await supabase.rpc("store_day_status", { p_date: d });
+      if (st?.late) late.set(d, st.late);
+    }),
+  );
   const name = new Map((staff ?? []).map((s) => [s.user_id, s.full_name]));
 
   return (
@@ -36,7 +45,14 @@ export default async function ClosesPage() {
                   </td>
                 ))}
                 <td className={`text-right font-semibold ${d.total === 0 ? "text-ball-dark" : "text-red-700"}`}>{diffText(d.total)}</td>
-                <td className="max-w-[200px] text-xs text-steel/70">{c.note}</td>
+                <td className="max-w-[220px] text-xs text-steel/70">
+                  {c.note}
+                  {!c.reopened_at && late.has(c.service_date) && (
+                    <span className="mt-1 block font-semibold text-surround-dark">
+                      Recorded after close: {formatPeso(late.get(c.service_date)!.cash + late.get(c.service_date)!.gcash + late.get(c.service_date)!.maya)}
+                    </span>
+                  )}
+                </td>
                 <td className="text-right">{!c.reopened_at && <ReopenButton closeId={c.id} />}</td>
               </tr>
             );

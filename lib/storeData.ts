@@ -24,10 +24,14 @@ export async function getStoreDay(): Promise<string> {
   return data as string;
 }
 
-/** Low-stock shelf items + earlier days nobody closed (sidebar badge). */
-export async function getStoreAlerts(): Promise<{ low: number; unclosed: string[] }> {
+/** Low-stock shelf items, earlier days nobody closed, and closed days with money recorded after the close (sidebar badge). */
+export async function getStoreAlerts(): Promise<{ low: number; unclosed: string[]; late: string[] }> {
   const supabase = await createUserClient();
-  const [{ data: cat }, { data: days }] = await Promise.all([supabase.rpc("store_catalog"), supabase.rpc("store_unclosed_days")]);
+  const [{ data: cat }, { data: days }, { data: late }] = await Promise.all([
+    supabase.rpc("store_catalog"),
+    supabase.rpc("store_unclosed_days"),
+    supabase.rpc("store_late_days"),
+  ]);
   const low = ((cat ?? []) as CatalogItem[]).filter((i) => i.active && i.kind === "shelf" && i.low_stock_at !== null && (i.on_hand ?? 0) <= i.low_stock_at).length;
-  return { low, unclosed: (days ?? []) as string[] };
+  return { low, unclosed: (days ?? []) as string[], late: (late ?? []) as string[] };
 }
