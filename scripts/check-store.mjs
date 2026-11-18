@@ -52,8 +52,9 @@ function addDays(date, n) {
 }
 const itemSave = (client, f) =>
   client.rpc("admin_save_store_item", {
-    p_id: f.id ?? null, p_name: f.name, p_kind: f.kind, p_price: f.price,
-    p_serving_cost: f.serving_cost ?? null, p_low_stock_at: f.low ?? null, p_active: true, p_sort: 0,
+    p_id: f.id ?? null, p_name: f.name, p_kind: f.kind, p_price: f.price, p_cost: f.cost ?? null,
+    p_low_stock_at: f.low ?? null, p_in_stock: f.in_stock ?? null, p_description: f.description ?? null,
+    p_image_path: f.image_path ?? null, p_active: true, p_sort: 0,
   });
 const onHand = async (id) => (await ok(admin.rpc("admin_store_stock"))).find((r) => r.id === id);
 const sell = (client, lines, method = "cash") => client.rpc("store_create_sale", { p_lines: lines, p_method: method });
@@ -67,19 +68,23 @@ if (setAside.length) await db.from("store_daily_closes").update({ reopened_at: n
 try {
   await test("admin manages items; staff can't", async () => {
     gat = await ok(itemSave(admin, { name: "CHECK Gatorade", kind: "shelf", price: 50, low: 5 }));
-    nachos = await ok(itemSave(admin, { name: "CHECK Nachos", kind: "made_to_order", price: 80, serving_cost: 35 }));
+    nachos = await ok(itemSave(admin, { name: "CHECK Nachos", kind: "made_to_order", price: 80, cost: 35, description: "Cheese and salsa", image_path: "check/nachos.jpg" }));
     made.items.push(gat, nachos);
     await expectError(itemSave(staff, { name: "CHECK Nope", kind: "shelf", price: 1 }), "forbidden");
     const cat = await ok(staff.rpc("store_catalog"));
     const row = cat.find((r) => r.id === gat);
     assert.equal(row.price, 50);
     assert.ok(!("avg_cost" in row) && !("serving_cost" in row), "catalog must not expose costs");
+    const n = cat.find((r) => r.id === nachos);
+    assert.equal(n.description, "Cheese and salsa");
+    assert.equal(n.image_path, "check/nachos.jpg");
   });
 
   await test("opening stock and restock set the average cost", async () => {
     await expectError(staff.rpc("store_add_stock", { p_item_id: gat, p_qty: 10, p_total_cost: 300, p_paid_from: "owner", p_opening: true }), "forbidden");
     await ok(admin.rpc("store_add_stock", { p_item_id: gat, p_qty: 10, p_total_cost: 300, p_paid_from: "owner", p_opening: true }));
-    const n = await ok(staff.rpc("store_add_stock", { p_item_id: gat, p_qty: 10, p_total_cost: 400, p_paid_from: "owner", p_opening: false }));
+    await expectError(staff.rpc("store_add_stock", { p_item_id: gat, p_qty: 10, p_total_cost: 400, p_paid_from: "owner", p_opening: false }), "forbidden");
+    const n = await ok(admin.rpc("store_add_stock", { p_item_id: gat, p_qty: 10, p_total_cost: 400, p_paid_from: "owner", p_opening: false }));
     assert.equal(n, 20);
     const s = await onHand(gat);
     assert.equal(Number(s.avg_cost), 35);
@@ -94,11 +99,29 @@ try {
     assert.equal(sale.total, 180);
     assert.equal(sale.service_date, today);
     assert.equal((await onHand(gat)).on_hand, 18);
-    await ok(staff.rpc("store_add_stock", { p_item_id: gat, p_qty: 2, p_total_cost: 100, p_paid_from: "owner", p_opening: false }));
+    await ok(admin.rpc("store_add_stock", { p_item_id: gat, p_qty: 2, p_total_cost: 100, p_paid_from: "owner", p_opening: false }));
     assert.equal(Number((await onHand(gat)).avg_cost), 36.5);
     const { data: lines } = await db.from("store_sale_lines").select("item_id, unit_cost").eq("sale_id", firstSale);
     assert.equal(Number(lines.find((l) => l.item_id === gat).unit_cost), 35);
     assert.equal(Number(lines.find((l) => l.item_id === nachos).unit_cost), 35);
+  });
+
+  await test("inventory form: new item with stock and cost, then edit both", async () => {
+    const id = await ok(itemSave(admin, { name: "CHECK Coke", kind: "shelf", price: 30, cost: 20, low: 6, in_stock: 12 }));
+    made.items.push(id);
+    let s = await onHand(id);
+    assert.equal(s.on_hand, 12);
+    assert.equal(Number(s.avg_cost), 20);
+    const { data: opening } = await db.from("store_stock_moves").select("kind, qty, total_cost").eq("item_id", id);
+    assert.deepEqual(opening.map((m) => [m.kind, m.qty, Number(m.total_cost)]), [["opening", 12, 240]]);
+    await ok(itemSave(admin, { id, name: "CHECK Coke", kind: "shelf", price: 35, cost: 22, low: 6, in_stock: 10 }));
+    s = await onHand(id);
+    assert.equal(s.on_hand, 10, "in stock edit becomes a count fix");
+    assert.equal(Number(s.avg_cost), 22, "cost edit sets the item cost");
+    assert.equal(s.price, 35);
+    const { data: fix } = await db.from("store_stock_moves").select("kind, qty, reason").eq("item_id", id).eq("kind", "correction");
+    assert.deepEqual(fix.map((m) => [m.qty, m.reason]), [[-2, "count fix"]]);
+    await expectError(itemSave(admin, { id, name: "CHECK Coke", kind: "shelf", price: 35, cost: 22, low: 6, in_stock: -1 }), "stock_below_zero");
   });
 
   await test("staff can't read costs", async () => {
@@ -144,7 +167,7 @@ try {
     const s = await ok(sell(staff, [{ item_id: nachos, qty: 2 }], "cash"));
     made.sales.push(s);
     made.cashOuts.push(await ok(staff.rpc("store_cash_out", { p_amount: 50, p_reason: "CHECK ice" })));
-    await ok(staff.rpc("store_add_stock", { p_item_id: gat, p_qty: 2, p_total_cost: 100, p_paid_from: "drawer", p_opening: false }));
+    await ok(admin.rpc("store_add_stock", { p_item_id: gat, p_qty: 2, p_total_cost: 100, p_paid_from: "drawer", p_opening: false }));
     // a cash court walk-in recorded today, for a slot two weeks out
     const slot = new Date(`${addDays(today, 14)}T15:00:00+08:00`).toISOString();
     const ref = await ok(staff.rpc("create_booking", { p_court_id: 2, p_slots: [slot], p_player_name: "CHECK Walkin", p_mobile: null, p_email: null, p_source: "walk_in", p_payment_method: "cash", p_note: null }));
