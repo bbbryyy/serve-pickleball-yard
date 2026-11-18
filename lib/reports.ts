@@ -1,5 +1,6 @@
 import "server-only";
 import { addDays, currentServiceDate, mondayOf, serviceHours, type BookingRules } from "./schedule";
+import type { OpenPlayDaily, OpenPlayRefund, OpenPlaySessionRow } from "./openPlay";
 import { createUserClient } from "./supabase/server";
 
 export type DailyRow = { date: string; court: number; method: string; source: string; bookings: number; hours: number; revenue: number };
@@ -10,7 +11,14 @@ export async function getReport(from: string, to: string) {
   const supabase = await createUserClient();
   const { data, error } = await supabase.rpc("report_summary", { p_from: from, p_to: to });
   if (error) throw new Error(error.message);
-  return data as { daily: DailyRow[]; heat: HeatRow[] };
+  return data as {
+    daily: DailyRow[];
+    heat: HeatRow[];
+    open_play: OpenPlayDaily[];
+    open_play_refunds: OpenPlayRefund[];
+    open_play_sessions: OpenPlaySessionRow[];
+    refunds_owed: number;
+  };
 }
 
 const isDate = (s: unknown): s is string => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
