@@ -1,18 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
-import { HoursCards } from "@/components/HoursTable";
 import { HowToBook } from "@/components/HowToBook";
+import { OpenPlaySection } from "@/components/OpenPlaySection";
 import { OurCourts } from "@/components/OurCourts";
 import { ContactUs } from "@/components/ContactUs";
 import { formatHour, formatPeso } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 
-// The home page only shows hours, rates, and courts, so it's prebuilt and
+// The home page only shows hours, rates, courts, and open play prices, so it's prebuilt and
 // refreshed every 5 minutes (and right away when Settings are saved).
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const { rules, courts } = await getSiteSettings();
+  const { rules, courts, openPlay } = await getSiteSettings();
 
   return (
     <>
@@ -41,16 +41,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Hours */}
-      <section id="hours" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-14">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-2">
-          <h2 className="font-display text-3xl font-semibold text-steel uppercase">Court hours</h2>
-          <p className="text-sm text-steel/70">Bookings are by the hour, starting on the hour.</p>
-        </div>
-        <HoursCards rules={rules} />
-      </section>
+      <OurCourts courts={courts} rules={rules} />
 
-      <OurCourts courts={courts} ratePerHour={rules.ratePerHour} />
+      <OpenPlaySection fee={openPlay.fee} playersPerCourt={openPlay.playersPerCourt} />
 
       {/* Coaching */}
       <section id="coaching" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-14">

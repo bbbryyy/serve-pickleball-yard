@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { formatPeso } from "@/lib/schedule";
+import { HoursCards } from "@/components/HoursTable";
+import { formatPeso, type BookingRules } from "@/lib/schedule";
 
 const icon = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 
@@ -51,7 +52,8 @@ const FEATURES = [
   },
 ];
 
-export function OurCourts({ courts, ratePerHour }: { courts: { id: number; name: string }[]; ratePerHour: number }) {
+export function OurCourts({ courts, rules }: { courts: { id: number; name: string }[]; rules: BookingRules }) {
+  const ratePerHour = rules.ratePerHour;
   return (
     <section id="courts" className="scroll-mt-20 bg-white py-16">
       <div className="mx-auto max-w-6xl px-4">
@@ -85,6 +87,15 @@ export function OurCourts({ courts, ratePerHour }: { courts: { id: number; name:
               </li>
             ))}
           </ul>
+        </div>
+
+        {/* court hours */}
+        <div id="hours" className="mt-10 scroll-mt-24">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <h3 className="font-display text-2xl font-semibold text-steel uppercase">Court hours</h3>
+            <p className="text-sm text-steel/70">Bookings are by the hour, starting on the hour.</p>
+          </div>
+          <HoursCards rules={rules} />
         </div>
 
         {/* one card per court */}

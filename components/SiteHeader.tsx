@@ -12,6 +12,7 @@ export function SiteHeader() {
         <nav className="flex items-center gap-1 text-sm font-semibold text-steel sm:gap-4">
           <Link href="/#top" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Home</Link>
           <Link href="/#courts" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Courts</Link>
+          <Link href="/#open-play" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Open play</Link>
           <Link href="/#coaching" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Coaching</Link>
           <Link href="/#how-to-book" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court sm:block">How to book</Link>
           <Link href="/#contact" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court sm:block">Contact us</Link>
