@@ -50,7 +50,7 @@ export function SiteFooter() {
         <figure className="mx-auto max-w-6xl py-6 pr-24 pl-4 text-center sm:pr-32 2xl:pr-4">
           <blockquote className="text-lg leading-snug text-white/85 italic sm:text-2xl">
             &ldquo;As for me and my house, we will{" "}
-            <span className="font-display text-2xl tracking-wide text-ball not-italic sm:text-4xl">SERVE</span> the Lord&rdquo;
+            <span className="font-display text-xl tracking-wide text-ball not-italic sm:text-3xl">SERVE</span> the Lord&rdquo;
           </blockquote>
           <figcaption className="mt-2 text-sm text-white/60">Joshua 24:15</figcaption>
         </figure>
