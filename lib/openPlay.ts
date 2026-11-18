@@ -85,3 +85,15 @@ export function salesSplit(rentals: DailyRow[], openPlay: OpenPlayDaily[], refun
     players: sum(openPlay, (x) => x.players),
   };
 }
+
+/**
+ * One open play rotation (home page animation). `order` is
+ * [left pair, right pair, ...line]: the losing pair goes to the back of the
+ * line and the next two in line take their places.
+ */
+export function rotateCourt(order: number[], losers: "left" | "right"): number[] {
+  const [a, b, c, d, ...line] = order;
+  const next = line.slice(0, 2);
+  const court = losers === "left" ? [...next, c, d] : [a, b, ...next];
+  return [...court, ...line.slice(2), ...(losers === "left" ? [a, b] : [c, d])];
+}

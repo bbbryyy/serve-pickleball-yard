@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { rotateCourt } from "@/lib/openPlay";
 
 // A top-down court where open play rotates: every few seconds the pair that
 // just played steps off to the back of the line and the next two walk on.
@@ -10,22 +11,14 @@ const COURT: [number, number][] = [[14, 15], [14, 43], [86, 15], [86, 43]];
 const LINE: [number, number][] = [[26, 86], [42, 86], [58, 86], [74, 86]];
 
 export function RotationCourt() {
-  const [order, setOrder] = useState(() => PLAYERS.map((_, i) => i));
-  const [game, setGame] = useState(1);
+  const [{ order, game }, setState] = useState(() => ({ order: PLAYERS.map((_, i) => i), game: 1 }));
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let side = 1;
     const t = window.setInterval(() => {
-      setOrder((o) => {
-        const [a, b, c, d, ...line] = o;
-        const stay = side ? [a, b] : [c, d];
-        const leave = side ? [c, d] : [a, b];
-        const next = line.slice(0, 2);
-        side = 1 - side;
-        return [...(side ? [...next, ...stay] : [...stay, ...next]), ...line.slice(2), ...leave];
-      });
-      setGame((g) => g + 1);
+      // winners stay: pick the losing side here, outside the state update
+      const losers = Math.random() < 0.5 ? "left" : "right";
+      setState((s) => ({ order: rotateCourt(s.order, losers), game: s.game + 1 }));
     }, 3200);
     return () => window.clearInterval(t);
   }, []);
