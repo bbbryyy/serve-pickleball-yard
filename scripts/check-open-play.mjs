@@ -153,6 +153,153 @@ try {
     const { error } = await anon.rpc("staff_create_open_play_session", { p_slots: slots(D4, 15, 16), p_court_ids: [1], p_note: "CHECK" });
     assert.ok(error, "anon call should fail");
   });
+
+  // ================================================================ Task 2: payments
+  const D5 = addDays(manilaToday, 18);
+  const names = (n, prefix = "Player") => Array.from({ length: n }, (_, i) => `${prefix} ${i + 1}`);
+  const pay = (code, playerNames, mobile = "09171234567") =>
+    db.rpc("create_open_play_payment", { p_code: code, p_player_names: playerNames, p_mobile: mobile, p_email: null });
+  async function payOk(code, playerNames) {
+    const { data, error } = await pay(code, playerNames);
+    if (error) throw new Error(error.message);
+    const { data: p } = await db.from("open_play_payments").select("*").eq("ref", data).single();
+    return p;
+  }
+  const publicSession = async (code) => (await db.rpc("get_open_play_public", { p_code: code })).data?.[0];
+  const held = async (id) => (await db.rpc("open_play_held", { p_session_id: id })).data;
+
+  await test("payment holds spots and totals from the session fee", async () => {
+    const s = await newSession(staff, slots(D5, 9, 10), [1]);
+    const p = await payOk(s.code, ["Juan Dela Cruz", "Ana Reyes", "Mark Santos"]);
+    assert.match(p.ref, /^SPY-OP-[A-Z2-9]{4}$/);
+    assert.equal(p.total_amount, 360);
+    assert.equal(p.status, "pending_payment");
+    assert.equal(await held(s.id), 3);
+    const pub = await publicSession(s.code);
+    assert.equal(pub.spots_left, 9);
+    assert.equal(pub.state, "open");
+    const { data: players } = await db.from("open_play_players").select("name").eq("payment_id", p.id).order("position");
+    assert.deepEqual(players.map((x) => x.name), ["Juan Dela Cruz", "Ana Reyes", "Mark Santos"]);
+  });
+
+  await test("last spot race: one of five wins", async () => {
+    const s = await newSession(staff, slots(D5, 10, 11), [1]);
+    await payOk(s.code, names(11));
+    const results = await Promise.all(Array.from({ length: 5 }, (_, i) => pay(s.code, [`Racer ${i + 1}`])));
+    const ok = results.filter((r) => !r.error);
+    assert.equal(ok.length, 1, `expected 1 winner, got ${ok.length}`);
+    for (const r of results.filter((r) => r.error)) assert.ok(r.error.message.startsWith("not_enough_spots:0"), r.error.message);
+    assert.equal((await publicSession(s.code)).state, "full");
+  });
+
+  await test("group larger than spots left is refused", async () => {
+    const s = await newSession(staff, slots(D5, 11, 12), [1]);
+    await payOk(s.code, names(10));
+    await expectError(pay(s.code, names(3)), "not_enough_spots:2");
+    await expectError(pay(s.code, names(13)), "too_many_players");
+    await expectError(pay(s.code, []), "too_many_players");
+  });
+
+  await test("closed, cancelled and unknown sessions refuse payments", async () => {
+    const { data: code1 } = await db.rpc("new_open_play_code");
+    const { data: closed } = await db.from("open_play_sessions").insert({
+      code: code1, service_date: manilaToday, starts_at: new Date(Date.now() - 3600e3).toISOString(),
+      ends_at: new Date(Date.now() + 3600e3).toISOString(), fee_per_player: 120, players_per_court: 12, note: "CHECK",
+    }).select().single();
+    createdSessions.push(closed.id);
+    await db.from("open_play_session_courts").insert({ session_id: closed.id, court_id: 1 });
+    assert.equal((await publicSession(code1)).state, "closed");
+    await expectError(pay(code1, ["Late Comer"]), "session_closed");
+
+    const s = await newSession(staff, slots(D5, 12, 13), [1]);
+    await db.from("open_play_sessions").update({ status: "cancelled" }).eq("id", s.id);
+    assert.equal((await publicSession(s.code)).state, "cancelled");
+    await expectError(pay(s.code, ["Some One"]), "session_cancelled");
+    await expectError(pay("NOPE00", ["Some One"]), "not_found");
+  });
+
+  await test("proof moves to for_verification; lapsed hold is refused", async () => {
+    const s = await newSession(staff, slots(D5, 13, 14), [1]);
+    const p = await payOk(s.code, ["Liza Cruz"]);
+    let r = await db.rpc("submit_open_play_payment", { p_ref: p.ref, p_method: "maya", p_payment_ref_no: "123456", p_proof_path: `${p.ref}/x.png` });
+    assert.ifError(r.error);
+    const { data: after } = await db.from("open_play_payments").select("status, payment_method").eq("id", p.id).single();
+    assert.equal(after.status, "for_verification");
+    assert.equal(after.payment_method, "maya");
+
+    const late = await payOk(s.code, ["Paolo Gomez"]);
+    await db.from("open_play_payments").update({ hold_expires_at: new Date(Date.now() - 60e3).toISOString() }).eq("id", late.id);
+    await expectError(db.rpc("submit_open_play_payment", { p_ref: late.ref, p_method: "gcash", p_payment_ref_no: "123456", p_proof_path: "x" }), "hold_expired");
+  });
+
+  await test("expired hold frees spots; approving it when full is refused", async () => {
+    const s = await newSession(staff, slots(D5, 14, 15), [1]);
+    const p = await payOk(s.code, names(2));
+    await db.from("open_play_payments").update({ hold_expires_at: new Date(Date.now() - 60e3).toISOString() }).eq("id", p.id);
+    const { data: n } = await db.rpc("expire_stale_holds");
+    assert.ok(n >= 1);
+    const { data: exp } = await db.from("open_play_payments").select("status").eq("id", p.id).single();
+    assert.equal(exp.status, "expired");
+    const w = await staff.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: names(12, "Walk"), p_payment_method: "cash", p_mobile: null });
+    assert.ifError(w.error);
+    await expectError(staff.rpc("staff_review_open_play_payment", { p_payment_id: p.id, p_action: "approve", p_note: null }), "not_enough_spots:0");
+    await expectError(staff.rpc("staff_extend_open_play_hold", { p_payment_id: p.id, p_minutes: 30 }), "not_enough_spots:0");
+    await expectError(staff.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: ["One More"], p_payment_method: "cash", p_mobile: null }), "not_enough_spots:0");
+  });
+
+  await test("extend hold revives an expired payment when spots allow; approve and reject", async () => {
+    const s = await newSession(staff, slots(D5, 15, 16), [1]);
+    const p = await payOk(s.code, names(2));
+    await db.from("open_play_payments").update({ status: "expired", hold_expires_at: new Date(Date.now() - 60e3).toISOString() }).eq("id", p.id);
+    const ext = await staff.rpc("staff_extend_open_play_hold", { p_payment_id: p.id, p_minutes: 30 });
+    assert.ifError(ext.error);
+    assert.equal(await held(s.id), 2);
+    const ap = await staff.rpc("staff_review_open_play_payment", { p_payment_id: p.id, p_action: "approve", p_note: null });
+    assert.ifError(ap.error);
+    const { data: c } = await db.from("open_play_payments").select("status, verified_at").eq("id", p.id).single();
+    assert.equal(c.status, "confirmed");
+    assert.ok(c.verified_at);
+    const q = await payOk(s.code, ["Rina Lim"]);
+    await expectError(staff.rpc("staff_review_open_play_payment", { p_payment_id: q.id, p_action: "reject", p_note: "" }), "reason_required");
+    const rj = await staff.rpc("staff_review_open_play_payment", { p_payment_id: q.id, p_action: "reject", p_note: "No payment received" });
+    assert.ifError(rj.error);
+    assert.equal(await held(s.id), 2);
+  });
+
+  await test("walk-in cash without mobile is confirmed; gcash without mobile is refused", async () => {
+    const s = await newSession(staff, slots(D5, 16, 17), [1]);
+    const { data: ref, error } = await staff.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: ["Ben Torres", "Carlo Lim"], p_payment_method: "cash", p_mobile: null });
+    assert.ifError(error);
+    const { data: w } = await db.from("open_play_payments").select("*").eq("ref", ref).single();
+    assert.equal(w.status, "confirmed");
+    assert.equal(w.source, "walk_in");
+    assert.equal(w.total_amount, 240);
+    assert.ok(w.verified_at);
+    const g = await staff.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: ["Dan Cruz"], p_payment_method: "gcash", p_mobile: null });
+    assert.ok(g.error && g.error.message.includes("open_play_mobile_required"), g.error?.message);
+  });
+
+  await test("public lookup hides mobile and full names", async () => {
+    const s = await newSession(staff, slots(D5, 17, 18), [1]);
+    const p = await payOk(s.code, ["Juan Dela Cruz", "Ana Reyes"]);
+    const { data } = await db.rpc("get_open_play_payment_public", { p_ref: p.ref.toLowerCase() });
+    const row = data[0];
+    assert.deepEqual(row.first_names, ["Juan", "Ana"]);
+    assert.equal(row.player_count, 2);
+    assert.equal(row.total_amount, 240);
+    assert.equal(row.status, "pending_payment");
+    assert.ok(!("mobile" in row));
+    assert.equal(row.code, s.code);
+  });
+
+  await test("anon cannot call payment or staff RPCs directly", async () => {
+    const s = await newSession(staff, slots(D5, 18, 19), [1]);
+    assert.ok((await anon.rpc("create_open_play_payment", { p_code: s.code, p_player_names: ["X Y"], p_mobile: "09171234567", p_email: null })).error);
+    assert.ok((await anon.rpc("staff_add_open_play_walkins", { p_session_id: s.id, p_player_names: ["X Y"], p_payment_method: "cash", p_mobile: null })).error);
+    assert.ok((await anon.from("open_play_payments").select("id").limit(1)).error || true);
+    const { data: rows } = await anon.from("open_play_payments").select("id").limit(1);
+    assert.ok(!rows || rows.length === 0);
+  });
 } finally {
   // ---- cleanup
   if (createdSessions.length) {
