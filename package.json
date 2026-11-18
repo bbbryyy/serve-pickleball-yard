@@ -10,7 +10,8 @@
     "test": "vitest run",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "check:permissions": "node --env-file=.env.local scripts/check-permissions.mjs",
-    "check:open-play": "node --env-file=.env.local scripts/check-open-play.mjs"
+    "check:open-play": "node --env-file=.env.local scripts/check-open-play.mjs",
+    "check:store": "node --env-file=.env.local scripts/check-store.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
