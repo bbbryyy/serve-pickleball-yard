@@ -25,6 +25,7 @@ The test backoffice accounts and their passwords are listed at the top of `scrip
 npm test                       # schedule and open play rules (hours, midnight, 24h notice, group size)
 npm run check:permissions      # staff/admin/public database permissions (after seeding)
 npm run check:open-play        # open play sessions, payments, refunds, reports (local only, after seeding)
+npm run check:store            # store sales, stock, daily close, reports (local only, after seeding)
 npx tsc --noEmit && npx eslint .
 ```
 

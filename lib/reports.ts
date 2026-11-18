@@ -1,6 +1,7 @@
 import "server-only";
 import { addDays, currentServiceDate, mondayOf, serviceHours, type BookingRules } from "./schedule";
 import type { OpenPlayDaily, OpenPlayRefund, OpenPlaySessionRow } from "./openPlay";
+import type { StoreDaily } from "./store";
 import { createUserClient } from "./supabase/server";
 
 export type DailyRow = { date: string; court: number; method: string; source: string; bookings: number; hours: number; revenue: number };
@@ -18,6 +19,7 @@ export async function getReport(from: string, to: string) {
     open_play_refunds: OpenPlayRefund[];
     open_play_sessions: OpenPlaySessionRow[];
     refunds_owed: number;
+    store: StoreDaily[];
   };
 }
 

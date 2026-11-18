@@ -1,5 +1,6 @@
 // Pure open play helpers (shared by server and client code).
 import type { DailyRow } from "./reports";
+import type { StoreDaily } from "./store";
 import { formatHour, formatServiceDate, serviceHours, serviceSlotOf, slotStartFor, type HoursConfig } from "./schedule";
 
 export const MAX_GROUP = 12;
@@ -71,16 +72,19 @@ export function parsePlayerNames(raw: string[]): { names: string[] } | { error: 
   return { names };
 }
 
-export function salesSplit(rentals: DailyRow[], openPlay: OpenPlayDaily[], refunds: OpenPlayRefund[]) {
+export function salesSplit(rentals: DailyRow[], openPlay: OpenPlayDaily[], refunds: OpenPlayRefund[], store: StoreDaily[] = []) {
   const sum = <T>(rows: T[], f: (r: T) => number) => rows.reduce((t, r) => t + f(r), 0);
   const r = sum(rentals, (x) => x.revenue);
   const o = sum(openPlay, (x) => x.revenue);
   const f = sum(refunds, (x) => x.amount);
+  const st = sum(store, (x) => x.revenue);
   return {
     rentals: r,
     openPlay: o,
     refunds: f,
-    total: r + o - f,
+    store: st,
+    storeProfit: Math.round((st - sum(store, (x) => Number(x.cost))) * 100) / 100,
+    total: r + o + st - f,
     rentalHours: sum(rentals, (x) => x.hours),
     players: sum(openPlay, (x) => x.players),
   };

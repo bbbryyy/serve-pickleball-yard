@@ -13,6 +13,20 @@ export function friendlyError(message: string | undefined): string {
   if (m.startsWith("reason_required")) return "Enter a reason for the player.";
   if (m.startsWith("too_many_slots")) return "You can book up to 12 hours at a time.";
   if (m.startsWith("no_slots")) return "Select at least one hour.";
+  if (m.startsWith("not_enough_stock:")) {
+    const [, name, left] = m.split(":");
+    return Number(left) > 0 ? `Only ${left} ${name} left.` : `${name} is out of stock.`;
+  }
+  if (m.startsWith("day_closed")) return "Today's store is already closed. Ask an admin to reopen it.";
+  if (m.startsWith("already_closed")) return "This day is already closed.";
+  if (m.startsWith("not_same_day")) return "Only an admin can cancel a sale from an earlier day.";
+  if (m.startsWith("stock_below_zero")) return "That would take stock below zero.";
+  if (m.startsWith("item_inactive:")) return `${m.split(":")[1]} isn't on sale right now.`;
+  if (m.startsWith("no_items")) return "Add at least one item.";
+  if (m.startsWith("invalid_reason")) return "Pick a reason for the correction.";
+  if (m.startsWith("not_shelf_item")) return "Only shelf items have stock.";
+  if (m.startsWith("invalid_date")) return "You can't close a day that hasn't started.";
+  if (m.includes("store_items_name_key")) return "There's already an item with that name.";
   if (m.startsWith("not_enough_spots:")) {
     const n = Number(m.split(":")[1]);
     if (!n) return "This session is full.";
