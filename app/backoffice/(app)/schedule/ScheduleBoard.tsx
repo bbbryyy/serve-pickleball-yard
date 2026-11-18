@@ -8,7 +8,8 @@ import { blockSlots, createWalkIn, unblockSlots, type ActionResult } from "../..
 
 export type SlotDetail =
   | { kind: "booking"; ref: string; name: string; mobile: string | null; status: string; source: string; total: number }
-  | { kind: "block" | "open_play"; reason: string };
+  | { kind: "block" | "open_play"; reason: string }
+  | { kind: "session"; reason: string; sessionId: string };
 
 const STATUS: Record<string, string> = { pending_payment: "Waiting for payment", for_verification: "For verification", confirmed: "Confirmed" };
 
@@ -30,7 +31,7 @@ export function ScheduleBoard({
   const [focus, setFocus] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult>({});
   const [pending, start] = useTransition();
-  const [form, setForm] = useState({ name: "", mobile: "", paymentMethod: "cash" as "cash" | "gcash" | "maya", note: "", reason: "", openPlayNote: "" });
+  const [form, setForm] = useState({ name: "", mobile: "", paymentMethod: "cash" as "cash" | "gcash" | "maya", note: "", reason: "" });
 
   const cells = useMemo(() => {
     const out: Record<string, GridCell> = {};
@@ -43,8 +44,10 @@ export function ScheduleBoard({
         title:
           d?.kind === "booking"
             ? `${d.ref} · ${d.name} · ${STATUS[d.status] ?? d.status}`
-            : d?.kind === "open_play"
-              ? `Open play: ${d.reason}`
+            : d?.kind === "session"
+              ? "Open play session · tap to open"
+              : d?.kind === "open_play"
+                ? `Open play: ${d.reason}`
               : d
                 ? `Blocked: ${d.reason}`
                 : undefined,
@@ -55,7 +58,7 @@ export function ScheduleBoard({
 
   const onCellClick = (key: string, cell: GridCell) => {
     setResult({});
-    if (cell.state === "booked" || cell.state === "pending") {
+    if (cell.state === "booked" || cell.state === "pending" || details[key]?.kind === "session") {
       setFocus(key);
       return;
     }
@@ -84,6 +87,15 @@ export function ScheduleBoard({
     });
 
   const focused = focus ? details[focus] : null;
+
+  // selected free hours → New session form, pre-filled (one day, continuous hours only)
+  const sessionLink = (() => {
+    const picked = [...selected.keys()].map((k) => k.split("|")).map(([d, h]) => ({ d, h: Number(h) }));
+    if (!picked.length || new Set(picked.map((p) => p.d)).size !== 1) return null;
+    const hrs = picked.map((p) => p.h).sort((a, b) => a - b);
+    if (hrs[hrs.length - 1] - hrs[0] !== hrs.length - 1) return null;
+    return `/backoffice/open-play/new?date=${picked[0].d}&from=${hrs[0]}&to=${hrs[hrs.length - 1] + 1}&court=${court.id}`;
+  })();
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -117,6 +129,13 @@ export function ScheduleBoard({
             </p>
             <p className="text-sm text-steel/70">{STATUS[focused.status] ?? focused.status} · {focused.source === "walk_in" ? "Walk-in" : "Online"} · {formatPeso(focused.total)}</p>
             <a className="btn-ghost w-full" href={`/backoffice?status=${focused.status}&q=${focused.ref}`}>Open in bookings</a>
+            <button className="text-xs text-steel/60 underline" onClick={() => setFocus(null)}>Close</button>
+          </>
+        ) : focused?.kind === "session" ? (
+          <>
+            <h2 className="font-display text-xl font-semibold text-steel uppercase">Open play session</h2>
+            <p className="text-sm text-steel/70">These hours belong to an open play session. See who has paid, add walk-ins, or cancel it from the session page.</p>
+            <a className="btn-ghost w-full" href={`/backoffice/open-play/${focused.sessionId}`}>Open session</a>
             <button className="text-xs text-steel/60 underline" onClick={() => setFocus(null)}>Close</button>
           </>
         ) : mode === "blocked" ? (
@@ -153,15 +172,14 @@ export function ScheduleBoard({
               </button>
             </div>
             <div className="space-y-2 border-t border-kitchen-light pt-3">
-              <p className="label">Or set as open play</p>
-              <input className="input" placeholder="Note (e.g. ₱150 per player, register on Reclub)" value={form.openPlayNote} onChange={(e) => setForm({ ...form, openPlayNote: e.target.value })} />
-              <button
-                className="btn w-full bg-court-deep text-ball hover:bg-court-dark"
-                disabled={pending}
-                onClick={() => run(() => blockSlots(court.id, isos, form.openPlayNote || "Open play", "open_play"))}
-              >
-                Set {isos.length} hour(s) as open play
-              </button>
+              <p className="label">Or start an open play session</p>
+              {sessionLink ? (
+                <a className="btn w-full bg-court-deep text-ball hover:bg-court-dark" href={sessionLink}>
+                  Create open play session
+                </a>
+              ) : (
+                <p className="text-xs text-steel/60">Pick one continuous block of hours on one day to start a session.</p>
+              )}
             </div>
             <div className="space-y-2 border-t border-kitchen-light pt-3">
               <p className="label">Or block these hours</p>
@@ -176,7 +194,7 @@ export function ScheduleBoard({
           <>
             <h2 className="font-display text-xl font-semibold text-steel uppercase">{court.name}</h2>
             <p className="text-sm text-steel/70">
-              Tap free hours to reserve them for a walk-in or phone booking, set them as open play, or block them. Tap a booking to see who it&apos;s for. Tap open play or blocked hours to make them bookable again.
+              Tap free hours to reserve them for a walk-in or phone booking, start an open play session, or block them. Tap a booking to see who it&apos;s for. Tap open play or blocked hours to make them bookable again.
             </p>
           </>
         )}

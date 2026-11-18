@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
-    "check:permissions": "node --env-file=.env.local scripts/check-permissions.mjs"
+    "check:permissions": "node --env-file=.env.local scripts/check-permissions.mjs",
+    "check:open-play": "node --env-file=.env.local scripts/check-open-play.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

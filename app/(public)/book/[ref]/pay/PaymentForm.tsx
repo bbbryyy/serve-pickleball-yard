@@ -3,8 +3,15 @@
 import { useActionState, useState } from "react";
 import { submitPayment, type PayState } from "./actions";
 
-export function PaymentForm({ reference }: { reference: string }) {
-  const [state, action, pending] = useActionState<PayState, FormData>(submitPayment, {});
+export function PaymentForm({
+  reference,
+  submit = submitPayment,
+}: {
+  reference: string;
+  /** server action that stores the proof; court bookings by default */
+  submit?: (prev: PayState, form: FormData) => Promise<PayState>;
+}) {
+  const [state, action, pending] = useActionState<PayState, FormData>(submit, {});
   const [preview, setPreview] = useState<string | null>(null);
   return (
     <form action={action} className="card space-y-3 p-5">

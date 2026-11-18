@@ -24,7 +24,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/backoff
       .eq("active", true)
       .gte("slot_start", from)
       .lt("slot_start", to),
-    supabase.from("blocked_slots").select("slot_start, reason, kind").eq("court_id", court.id).gte("slot_start", from).lt("slot_start", to),
+    supabase.from("blocked_slots").select("slot_start, reason, kind, session_id").eq("court_id", court.id).gte("slot_start", from).lt("slot_start", to),
   ]);
 
   const details: Record<string, SlotDetail> = {};
@@ -36,7 +36,9 @@ export default async function SchedulePage({ searchParams }: PageProps<"/backoff
   }
   for (const bl of blocks ?? []) {
     const { serviceDate, sh } = serviceSlotOf(new Date(bl.slot_start), rules);
-    details[`${serviceDate}|${sh}`] = { kind: bl.kind === "open_play" ? "open_play" : "block", reason: bl.reason };
+    details[`${serviceDate}|${sh}`] = bl.session_id
+      ? { kind: "session", reason: "Open play session", sessionId: bl.session_id }
+      : { kind: bl.kind === "open_play" ? "open_play" : "block", reason: bl.reason };
   }
 
   const today = currentServiceDate(new Date(), rules);

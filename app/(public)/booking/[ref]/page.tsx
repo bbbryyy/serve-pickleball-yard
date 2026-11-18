@@ -2,10 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { STATUS_TEXT, getPublicBooking } from "@/lib/booking";
 import { formatPeso, groupSlots } from "@/lib/schedule";
+import { isOpenPlayRef } from "@/lib/openPlay";
 import { getSiteSettings } from "@/lib/settings";
+import { OpenPlayStatus } from "./OpenPlayStatus";
 
 export default async function BookingStatusPage({ params }: PageProps<"/booking/[ref]">) {
   const { ref } = await params;
+  if (isOpenPlayRef(ref)) return <OpenPlayStatus reference={ref} />;
   const booking = await getPublicBooking(ref);
   if (!booking) notFound();
   const { rules } = await getSiteSettings();

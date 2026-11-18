@@ -17,6 +17,8 @@ const SettingsInput = z
     regular_start: z.coerce.number().int().min(0).max(23),
     late_start: z.coerce.number().int().min(1).max(24),
     close_hour: z.coerce.number().int().min(0).max(23),
+    open_play_fee: z.coerce.number().int().min(1, "Enter an open play fee of at least ₱1.").max(10000),
+    open_play_players_per_court: z.coerce.number().int().min(1, "Players per court must be 1 to 50.").max(50, "Players per court must be 1 to 50."),
     gcash_name: z.string().trim().max(100),
     gcash_number: z.string().trim().max(30),
     maya_name: z.string().trim().max(100),
