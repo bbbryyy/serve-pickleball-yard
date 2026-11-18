@@ -171,7 +171,7 @@ try {
   await test("payment holds spots and totals from the session fee", async () => {
     const s = await newSession(staff, slots(D5, 9, 10), [1]);
     const p = await payOk(s.code, ["Juan Dela Cruz", "Ana Reyes", "Mark Santos"]);
-    assert.match(p.ref, /^SPY-OP-[A-Z2-9]{4}$/);
+    assert.match(p.ref, /^SPY-OP-[A-Z2-9]{6}$/);
     assert.equal(p.total_amount, 360);
     assert.equal(p.status, "pending_payment");
     assert.equal(await held(s.id), 3);
@@ -375,6 +375,22 @@ try {
     const today = await report(manilaToday, manilaToday);
     assert.equal(sumFor(today.open_play_refunds, manilaToday, "amount") - refundedBefore, 360, "only the approved payment is money out");
     assert.equal(sumFor(today.open_play_refunds, manilaToday, "players") - refundPlayersBefore, 3);
+  });
+
+  await test("a cancelled session's payments can't be approved, revived, or paid", async () => {
+    const D8 = addDays(manilaToday, 21);
+    const s = await newSession(staff, slots(D8, 9, 10), [1]);
+    const lapsed = await payOk(s.code, ["Late Payer"]);
+    await db.from("open_play_payments").update({ status: "expired", hold_expires_at: new Date(Date.now() - 60e3).toISOString() }).eq("id", lapsed.id);
+    const racing = await payOk(s.code, ["Racing Upload"]);
+    assert.ifError((await staff.rpc("staff_cancel_open_play_session", { p_session_id: s.id, p_reason: "Rain" })).error);
+    await expectError(approve(lapsed.id), "session_cancelled");
+    await expectError(staff.rpc("staff_extend_open_play_hold", { p_payment_id: lapsed.id, p_minutes: 30 }), "session_cancelled");
+    // an upload that loses the race with cancel must not land
+    await db.from("open_play_payments").update({ status: "pending_payment" }).eq("id", racing.id);
+    await expectError(submit(racing.ref), "session_cancelled");
+    const { data } = await db.rpc("get_open_play_payment_public", { p_ref: racing.ref });
+    assert.equal(data[0].status, "cancelled");
   });
 
   await test("staff cannot read report data", async () => {

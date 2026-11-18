@@ -40,7 +40,13 @@ export default async function OpenPlayListPage({ searchParams }: PageProps<"/bac
     .from("open_play_sessions")
     .select("id, service_date, starts_at, ends_at, status, players_per_court, fee_per_player, open_play_session_courts(court_id), open_play_payments(status, player_count, hold_expires_at)")
     .order("starts_at", { ascending: true });
-  if (!refundsOnly) query = query.gte("service_date", addDays(currentServiceDate(now, rules), -30));
+  if (refundsOnly) {
+    // look up the sessions that owe refunds directly, however old or many they are
+    const { data: owed } = await supabase.from("open_play_payments").select("session_id").eq("status", "refund_owed");
+    query = query.in("id", [...new Set((owed ?? []).map((r) => r.session_id))]);
+  } else {
+    query = query.gte("service_date", addDays(currentServiceDate(now, rules), -30));
+  }
   const { data, error } = await query.limit(200);
   if (error) throw new Error(error.message);
 
