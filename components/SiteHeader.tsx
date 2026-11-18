@@ -47,11 +47,12 @@ export function SiteFooter() {
         </p>
       </div>
       <div className="border-t border-white/10">
-        <figure className="mx-auto max-w-6xl py-4 pr-24 pl-4 text-center sm:pr-32 2xl:pr-4">
-          <blockquote className="text-white/85 italic">
-            &ldquo;As for me and my house, we will <span className="font-display tracking-wide text-ball not-italic">SERVE</span> the Lord&rdquo;
+        <figure className="mx-auto max-w-6xl py-6 pr-24 pl-4 text-center sm:pr-32 2xl:pr-4">
+          <blockquote className="text-lg leading-snug text-white/85 italic sm:text-2xl">
+            &ldquo;As for me and my house, we will{" "}
+            <span className="font-display text-2xl tracking-wide text-ball not-italic sm:text-4xl">SERVE</span> the Lord&rdquo;
           </blockquote>
-          <figcaption className="mt-1 text-xs text-white/60">Joshua 24:15</figcaption>
+          <figcaption className="mt-2 text-sm text-white/60">Joshua 24:15</figcaption>
         </figure>
       </div>
     </footer>
