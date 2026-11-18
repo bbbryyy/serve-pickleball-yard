@@ -11,17 +11,22 @@ export function NewSessionForm({
   fee,
   playersPerCourt,
   today,
+  initial = {},
 }: {
   hours: number[];
   courts: { id: number; name: string }[];
   fee: number;
   playersPerCourt: number;
   today: string;
+  /** pre-filled from the schedule's "Create open play session" link */
+  initial?: { date?: string; from?: number; to?: number; court?: number };
 }) {
-  const [date, setDate] = useState(today);
-  const [from, setFrom] = useState(18);
-  const [to, setTo] = useState(22);
-  const [picked, setPicked] = useState<number[]>(courts.map((c) => c.id));
+  const [date, setDate] = useState(initial.date ?? today);
+  const [from, setFrom] = useState(initial.from && hours.includes(initial.from) ? initial.from : 18);
+  const [to, setTo] = useState(initial.to && initial.to > (initial.from ?? 0) ? initial.to : 22);
+  const [picked, setPicked] = useState<number[]>(
+    initial.court && courts.some((c) => c.id === initial.court) ? [initial.court] : courts.map((c) => c.id),
+  );
   const [note, setNote] = useState("");
   const [result, setResult] = useState<ActionResult>({});
   const [pending, start] = useTransition();

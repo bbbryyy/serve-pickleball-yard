@@ -31,7 +31,7 @@ export function ScheduleBoard({
   const [focus, setFocus] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult>({});
   const [pending, start] = useTransition();
-  const [form, setForm] = useState({ name: "", mobile: "", paymentMethod: "cash" as "cash" | "gcash" | "maya", note: "", reason: "", openPlayNote: "" });
+  const [form, setForm] = useState({ name: "", mobile: "", paymentMethod: "cash" as "cash" | "gcash" | "maya", note: "", reason: "" });
 
   const cells = useMemo(() => {
     const out: Record<string, GridCell> = {};
@@ -87,6 +87,15 @@ export function ScheduleBoard({
     });
 
   const focused = focus ? details[focus] : null;
+
+  // selected free hours → New session form, pre-filled (one day, continuous hours only)
+  const sessionLink = (() => {
+    const picked = [...selected.keys()].map((k) => k.split("|")).map(([d, h]) => ({ d, h: Number(h) }));
+    if (!picked.length || new Set(picked.map((p) => p.d)).size !== 1) return null;
+    const hrs = picked.map((p) => p.h).sort((a, b) => a - b);
+    if (hrs[hrs.length - 1] - hrs[0] !== hrs.length - 1) return null;
+    return `/backoffice/open-play/new?date=${picked[0].d}&from=${hrs[0]}&to=${hrs[hrs.length - 1] + 1}&court=${court.id}`;
+  })();
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -163,15 +172,14 @@ export function ScheduleBoard({
               </button>
             </div>
             <div className="space-y-2 border-t border-kitchen-light pt-3">
-              <p className="label">Or set as open play</p>
-              <input className="input" placeholder="Note (e.g. ₱150 per player, register on Reclub)" value={form.openPlayNote} onChange={(e) => setForm({ ...form, openPlayNote: e.target.value })} />
-              <button
-                className="btn w-full bg-court-deep text-ball hover:bg-court-dark"
-                disabled={pending}
-                onClick={() => run(() => blockSlots(court.id, isos, form.openPlayNote || "Open play", "open_play"))}
-              >
-                Set {isos.length} hour(s) as open play
-              </button>
+              <p className="label">Or start an open play session</p>
+              {sessionLink ? (
+                <a className="btn w-full bg-court-deep text-ball hover:bg-court-dark" href={sessionLink}>
+                  Create open play session
+                </a>
+              ) : (
+                <p className="text-xs text-steel/60">Pick one continuous block of hours on one day to start a session.</p>
+              )}
             </div>
             <div className="space-y-2 border-t border-kitchen-light pt-3">
               <p className="label">Or block these hours</p>
@@ -186,7 +194,7 @@ export function ScheduleBoard({
           <>
             <h2 className="font-display text-xl font-semibold text-steel uppercase">{court.name}</h2>
             <p className="text-sm text-steel/70">
-              Tap free hours to reserve them for a walk-in or phone booking, set them as open play, or block them. Tap a booking to see who it&apos;s for. Tap open play or blocked hours to make them bookable again.
+              Tap free hours to reserve them for a walk-in or phone booking, start an open play session, or block them. Tap a booking to see who it&apos;s for. Tap open play or blocked hours to make them bookable again.
             </p>
           </>
         )}

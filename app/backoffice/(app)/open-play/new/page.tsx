@@ -4,8 +4,9 @@ import { currentServiceDate, serviceHours } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 import { NewSessionForm } from "./NewSessionForm";
 
-export default async function NewSessionPage() {
+export default async function NewSessionPage({ searchParams }: PageProps<"/backoffice/open-play/new">) {
   await requireStaff();
+  const sp = await searchParams;
   const { rules, courts, openPlay } = await getSiteSettings();
   return (
     <div className="mx-auto max-w-xl space-y-4">
@@ -17,6 +18,12 @@ export default async function NewSessionPage() {
         fee={openPlay.fee}
         playersPerCourt={openPlay.playersPerCourt}
         today={currentServiceDate(new Date(), rules)}
+        initial={{
+          date: typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : undefined,
+          from: Number(sp.from) || undefined,
+          to: Number(sp.to) || undefined,
+          court: Number(sp.court) || undefined,
+        }}
       />
     </div>
   );

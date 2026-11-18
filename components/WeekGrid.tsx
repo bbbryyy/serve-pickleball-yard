@@ -19,6 +19,7 @@ const STATE_CLASS: Record<GridCell["state"], string> = {
   open_play: "bg-[radial-gradient(circle,#c8e63c_0_3px,transparent_4px),linear-gradient(#0f2f63,#0f2f63)] text-ball",
   unavailable: "bg-kitchen-light",
 };
+const LABELLED_OPEN_PLAY = "open-play-labelled text-ball";
 
 export function GridLegend({ staff = false }: { staff?: boolean }) {
   const items: [string, string][] = [
@@ -118,7 +119,11 @@ export function WeekGrid({
                         aria-pressed={isSel}
                         aria-label={`${dayShort(d)} ${d} ${formatHour(h)}: ${isSel ? "selected" : cell.state.replace("_", " ")}`}
                         className={`block h-7 w-full truncate rounded-[3px] px-1 text-left leading-7 transition ${
-                          isSel ? "bg-ball text-ball-dark ring-2 ring-ball-dark/30" : STATE_CLASS[cell.state]
+                          isSel
+                            ? "bg-ball text-ball-dark ring-2 ring-ball-dark/30"
+                            : showLabels && cell.label && cell.state === "open_play"
+                              ? LABELLED_OPEN_PLAY // ball moved right so it doesn't cover the text
+                              : STATE_CLASS[cell.state]
                         } ${clickable ? "cursor-pointer" : "cursor-default"} ${
                           band !== "regular" && cell.state === "available" && !isSel ? "opacity-80" : ""
                         }`}

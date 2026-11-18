@@ -158,7 +158,7 @@ Staff work from two pages: a bookings queue for checking payments and a schedule
 - The same grid as the public site, with player first names or block reasons inside the cells. Staff can go to past weeks and up to a year ahead.
 - Tap free hours to either:
   - Reserve for a walk-in or phone player (name, mobile, and paid in cash, GCash, or Maya). The booking is confirmed right away.
-  - Set them as open play, with an optional note such as the fee per player. Or block them with a reason, such as maintenance or a private event.
+  - Start an open play session: opens Open Play → New session with the date, hours, and court filled in. Or block them with a reason, such as maintenance or a private event.
 - Tap open play or blocked hours to make them bookable again. Hours that belong to an open play session can't be freed here; tapping them links to the session.
 - Tap a booking to see its reference, contact, status, and total, with a link to it in the queue.
 
