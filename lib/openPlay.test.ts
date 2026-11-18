@@ -6,6 +6,7 @@ import {
   maxGroupSize,
   openPlayTotal,
   parsePlayerNames,
+  rotateCourt,
   salesSplit,
   sessionSlots,
   type OpenPlayDaily,
@@ -70,5 +71,21 @@ describe("salesSplit", () => {
     expect(
       salesSplit([{ revenue: 800, hours: 2 } as DailyRow], [{ revenue: 360, players: 3 } as OpenPlayDaily], [{ amount: 120 } as OpenPlayRefund]),
     ).toMatchObject({ rentals: 800, openPlay: 360, refunds: 120, total: 1040, rentalHours: 2, players: 3 });
+  });
+});
+
+describe("rotateCourt", () => {
+  // order = [left pair, right pair, ...line]
+  const start = [0, 1, 2, 3, 4, 5, 6, 7];
+  it("sends the left pair to the back of the line and brings the next two on", () => {
+    expect(rotateCourt(start, "left")).toEqual([4, 5, 2, 3, 6, 7, 0, 1]);
+  });
+  it("sends the right pair off when they lose", () => {
+    expect(rotateCourt(start, "right")).toEqual([0, 1, 4, 5, 6, 7, 2, 3]);
+  });
+  it("keeps every player exactly once", () => {
+    let o = start;
+    for (const side of ["left", "right", "right", "left", "left"] as const) o = rotateCourt(o, side);
+    expect([...o].sort()).toEqual(start);
   });
 });

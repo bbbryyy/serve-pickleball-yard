@@ -18,3 +18,6 @@ export const MAP_EMBED_URL = `https://maps.google.com/maps?q=${q}&ll=${CONTACT.l
 
 /** Opens Google Maps (app on phones) with directions to the venue. */
 export const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${CONTACT.lat},${CONTACT.lng}`;
+
+/** Serve's club page on Reclub, where players register for open play. Replace with the club's own link. */
+export const RECLUB_URL = "https://reclub.co";

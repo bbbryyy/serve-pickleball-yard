@@ -12,6 +12,7 @@ export function SiteHeader() {
         <nav className="flex items-center gap-1 text-sm font-semibold text-steel sm:gap-4">
           <Link href="/#top" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Home</Link>
           <Link href="/#courts" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Courts</Link>
+          <Link href="/#open-play" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Open play</Link>
           <Link href="/#coaching" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court lg:block">Coaching</Link>
           <Link href="/#how-to-book" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court sm:block">How to book</Link>
           <Link href="/#contact" className="hidden rounded px-2 py-1 whitespace-nowrap hover:text-court sm:block">Contact us</Link>
@@ -44,6 +45,15 @@ export function SiteFooter() {
           <Link href="/#contact" className="hover:text-white">Contact us</Link>
           <Link href="/backoffice" className="hover:text-white">Staff</Link>
         </p>
+      </div>
+      <div className="border-t border-white/10">
+        <figure className="mx-auto max-w-6xl py-6 pr-24 pl-4 text-center sm:pr-32 2xl:pr-4">
+          <blockquote className="text-lg leading-snug text-white/85 italic sm:text-2xl">
+            &ldquo;As for me and my house, we will{" "}
+            <span className="font-display text-xl tracking-wide text-ball not-italic sm:text-3xl">SERVE</span> the Lord&rdquo;
+          </blockquote>
+          <figcaption className="mt-2 text-sm text-white/60">Joshua 24:15</figcaption>
+        </figure>
       </div>
     </footer>
   );
