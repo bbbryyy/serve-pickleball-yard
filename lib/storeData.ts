@@ -10,6 +10,8 @@ export type CatalogItem = {
   active: boolean;
   sort_order: number;
   on_hand: number | null;
+  description: string | null;
+  image_path: string | null;
 };
 
 export async function getCatalog(): Promise<CatalogItem[]> {

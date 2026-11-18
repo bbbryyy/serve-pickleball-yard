@@ -12,6 +12,8 @@ export type StockRow = {
   low_stock_at: number | null;
   active: boolean;
   sort_order: number;
+  description: string | null;
+  image_path: string | null;
 };
 
 /** Admin-only: every item with its costs (the database refuses staff). */

@@ -78,8 +78,8 @@ export function CloseForm({
         ) : null}
         <p className="mt-3 text-xs text-steel/60">
           {isToday
-            ? "To add a missed sale or recount, an admin can reopen today from Past closes."
-            : "If the count was wrong, an admin can reopen this day from Past closes so it can be counted again. Ring up a missed sale today."}
+            ? "To add a missed sale or recount, an admin can reopen today from Store Report → Past closes."
+            : "If the count was wrong, an admin can reopen this day from Store Report → Past closes so it can be counted again. Ring up a missed sale today."}
         </p>
       </div>
     );

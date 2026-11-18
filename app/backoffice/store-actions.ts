@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin, requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import type { PayMethod } from "@/lib/store";
-import { createUserClient } from "@/lib/supabase/server";
+import { createServiceClient, createUserClient } from "@/lib/supabase/server";
 import type { ActionResult } from "./actions";
 
 // Store (POS). Role checks are repeated in the SQL functions.
@@ -36,8 +36,7 @@ export async function cancelSale(saleId: string, reason: string): Promise<Action
 }
 
 export async function addStock(input: { itemId: string; qty: number; totalCost: number; paidFrom: string; opening: boolean }): Promise<ActionResult> {
-  if (input.opening) await requireAdmin();
-  else await requireStaff();
+  await requireAdmin();
   if (!Number.isInteger(input.qty) || input.qty <= 0) return { error: "Enter how many came in." };
   if (!Number.isInteger(input.totalCost) || input.totalCost < 0) return { error: "Enter the total paid in pesos." };
   const r = await call<number>("store_add_stock", {
@@ -71,19 +70,46 @@ export async function closeDay(input: { date: string; cash: number; gcash: numbe
 // ---- admin
 
 export async function saveItem(input: {
-  id: string | null; name: string; kind: "shelf" | "made_to_order"; price: number; servingCost: number | null; lowStockAt: number | null; active: boolean; sort: number;
+  id: string | null;
+  name: string;
+  kind: "shelf" | "made_to_order";
+  price: number;
+  cost: number | null;
+  lowStockAt: number | null;
+  inStock: number | null;
+  description: string;
+  imagePath: string | null;
+  active: boolean;
+  sort: number;
 }): Promise<ActionResult> {
   await requireAdmin();
   if (input.name.trim().length < 2) return { error: "Enter the item name." };
   if (!Number.isInteger(input.price) || input.price <= 0) return { error: "Enter a selling price in whole pesos." };
-  if (input.kind === "made_to_order" && (input.servingCost === null || input.servingCost < 0)) return { error: "Enter the cost per serving." };
+  if (input.cost === null || !(input.cost >= 0)) return { error: input.kind === "shelf" ? "Enter what one item costs you." : "Enter the cost per serving." };
+  if (input.inStock !== null && (!Number.isInteger(input.inStock) || input.inStock < 0)) return { error: "Enter how many are in stock." };
   const r = await call("admin_save_store_item", {
-    p_id: input.id, p_name: input.name, p_kind: input.kind, p_price: input.price, p_serving_cost: input.servingCost,
-    p_low_stock_at: input.lowStockAt, p_active: input.active, p_sort: input.sort,
+    p_id: input.id, p_name: input.name, p_kind: input.kind, p_price: input.price, p_cost: input.cost,
+    p_low_stock_at: input.lowStockAt, p_in_stock: input.inStock, p_description: input.description,
+    p_image_path: input.imagePath, p_active: input.active, p_sort: input.sort,
   });
   if (r.error) return { error: r.error };
   refresh();
-  return { ok: "Item saved" };
+  return { ok: input.id ? "Item saved" : "Item added" };
+}
+
+const IMAGE_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+/** Uploads an item photo to the public store-images bucket; returns its path. */
+export async function uploadItemImage(form: FormData): Promise<{ path?: string; error?: string }> {
+  await requireAdmin();
+  const file = form.get("image");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo." };
+  if (!IMAGE_TYPES[file.type]) return { error: "Photos must be JPG, PNG, or WEBP." };
+  if (file.size > 2 * 1024 * 1024) return { error: "Photos must be 2MB or smaller." };
+  const path = `items/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${IMAGE_TYPES[file.type]}`;
+  const { error } = await createServiceClient().storage.from("store-images").upload(path, file, { contentType: file.type });
+  if (error) return { error: "Upload failed. Try again." };
+  return { path };
 }
 
 export async function correctStock(itemId: string, qty: number, reason: string): Promise<ActionResult> {

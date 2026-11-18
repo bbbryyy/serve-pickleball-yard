@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ItemImage } from "@/components/ItemImage";
 import { formatPeso } from "@/lib/schedule";
 import { PAYMENT_LABEL, cartTotal, isLow, type PayMethod } from "@/lib/store";
 import type { CatalogItem } from "@/lib/storeData";
@@ -11,7 +12,9 @@ export type TodaySale = { id: string; method: PayMethod; total: number; status: 
 
 const time = (iso: string) => new Date(iso).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
 
-export function SellScreen({ items, sales, closed }: { items: CatalogItem[]; sales: TodaySale[]; closed: boolean }) {
+export type PosItem = CatalogItem & { imageUrl: string | null };
+
+export function SellScreen({ items, sales, closed }: { items: PosItem[]; sales: TodaySale[]; closed: boolean }) {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [method, setMethod] = useState<PayMethod>("cash");
   const [result, setResult] = useState<ActionResult>({});
@@ -21,7 +24,7 @@ export function SellScreen({ items, sales, closed }: { items: CatalogItem[]; sal
 
   const lines = items.filter((i) => cart[i.id]).map((i) => ({ item: i, qty: cart[i.id] }));
   const total = cartTotal(lines.map((l) => ({ qty: l.qty, price: l.item.price })));
-  const add = (i: CatalogItem, d: number) =>
+  const add = (i: PosItem, d: number) =>
     setCart((c) => {
       const next = Math.max(0, (c[i.id] ?? 0) + d);
       if (i.kind === "shelf" && next > (i.on_hand ?? 0)) return c;
@@ -36,7 +39,7 @@ export function SellScreen({ items, sales, closed }: { items: CatalogItem[]; sal
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         {items.length === 0 ? (
-          <p className="card p-6 text-sm text-steel/70">No items yet. An admin can add them under Items.</p>
+          <p className="card p-6 text-sm text-steel/70">No items yet. An admin can add them in Inventory.</p>
         ) : (
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
             {items.map((i) => {
@@ -48,18 +51,22 @@ export function SellScreen({ items, sales, closed }: { items: CatalogItem[]; sal
                     type="button"
                     disabled={closed || out}
                     onClick={() => add(i, 1)}
-                    className="relative flex h-full min-h-20 w-full flex-col items-start justify-between rounded-xl border border-kitchen bg-white p-2.5 text-left hover:border-court disabled:opacity-45"
+                    title={i.description ?? undefined}
+                    className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-kitchen bg-white text-left hover:border-court disabled:opacity-45"
                   >
-                    <span className="pr-8 text-sm leading-tight font-semibold text-steel">{i.name}</span>
-                    <span className="text-sm font-semibold text-court">{formatPeso(i.price)}</span>
+                    <ItemImage url={i.imageUrl} name={i.name} className="aspect-[4/3] w-full" />
+                    <span className="flex flex-1 flex-col justify-between gap-0.5 p-2">
+                      <span className="text-sm leading-tight font-semibold text-steel">{i.name}</span>
+                      <span className="text-sm font-semibold text-court">{formatPeso(i.price)}</span>
+                    </span>
                     <span
-                      className={`absolute top-2 right-2 rounded-full px-1.5 text-[10px] font-semibold ${
-                        i.kind === "made_to_order" ? "bg-ball/40 text-ball-dark" : (i.on_hand ?? 0) <= 0 ? "bg-red-50 text-red-700" : low ? "bg-surround/20 text-surround-dark" : "bg-kitchen-light text-steel"
+                      className={`absolute top-1.5 right-1.5 rounded-full px-1.5 text-[10px] font-semibold shadow-sm ${
+                        i.kind === "made_to_order" ? "bg-ball/40 text-ball-dark" : (i.on_hand ?? 0) <= 0 ? "bg-red-50 text-red-700" : low ? "bg-surround/20 text-surround-dark" : "bg-white text-steel"
                       }`}
                     >
                       {i.kind === "made_to_order" ? "made" : low && (i.on_hand ?? 0) > 0 ? `${i.on_hand} low` : i.on_hand}
                     </span>
-                    {cart[i.id] ? <span className="absolute right-2 bottom-2 rounded-full bg-court px-1.5 text-xs font-semibold text-white">×{cart[i.id]}</span> : null}
+                    {cart[i.id] ? <span className="absolute top-1.5 left-1.5 rounded-full bg-court px-1.5 text-xs font-semibold text-white shadow-sm">×{cart[i.id]}</span> : null}
                   </button>
                 </li>
               );

@@ -253,22 +253,24 @@ Players register for open play in Reclub. Our site handles the money: each sessi
 
 A simple POS for the court store: drinks, chocolate bars, cup noodles, nachos and other quick-serve food. No receipts. Design: `docs/superpowers/specs/2026-11-18-store-pos-design.md`.
 
-**Staff (`/backoffice/store`)**
+The backoffice sidebar is grouped: **Pickleball** (Bookings, Schedule, Open Play, Sales, Analytics, Settings), **Store** (POS, Inventory, Store Report) and **Users**. Staff see Bookings, Schedule, Open Play and POS.
 
-- **Sell:** tap item buttons (price and stock shown; low and sold-out flagged) into a sale, pick Cash, GCash or Maya, save. Today's sales are listed and can be cancelled the same day, which puts the items back in stock.
-- **Restock:** item, quantity, total paid, and paid from (owner, drawer, GCash, Maya). Paid from the drawer counts as cash out. Staff never see costs.
-- **Cash out:** money taken from the drawer for anything else, with a reason.
-- **Close day:** one close per day for all desk money. Expected cash = store cash sales + cash court walk-ins + cash open play walk-ins − cash out. GCash and Maya also include online booking and open play payments approved that day. Staff enter what they counted; differences are saved and the day is locked.
-- The Store menu badge counts low-stock items and earlier days nobody closed.
+**POS (staff and admins)**
 
-**Admins**
+- **Sell:** item tiles with photo ("No image" placeholder), price and stock; low and sold-out flagged. Tap into a sale, pick Cash, GCash or Maya, save. Today's sales can be cancelled the same day (items go back into stock).
+- **Cash out:** money taken from the drawer, with a reason.
+- **Close day:** one close per day for all desk money. Expected cash = store cash sales + cash court walk-ins (on their play date) + cash open play walk-ins − cash out. GCash and Maya also include online booking and open play payments approved that day. Staff enter what they counted; differences are saved and the day is locked. Money recorded after a close is flagged.
 
-- **Items:** shelf items (counted, with a low-stock level) and made-to-order items (fixed cost per serving and selling price).
-- **Stock:** counts, average cost, stock value, history per item, and corrections (expired, damaged, given away, count fix). Opening stock is entered once with an estimated cost.
-- **Past closes:** expected vs counted per method; reopen a day to add a missed sale or fix a mistake (it must be counted and closed again).
-- **Store report:** revenue, cost, profit after losses, margin per item, payment methods, low stock, losses. The Sales page shows Store next to court rentals and open play, and the CSV has `store` rows.
+**Inventory (admins)**
 
-Profit uses the average cost at the time of each sale, so later price changes never change past profit.
+- Add and edit items: image, name, description, category (shelf item or made to order), in stock, warn-at level, item cost, selling price, on sale.
+- For shelf items, a new item's "in stock" is its opening stock; changing it later is saved as a count fix. Item cost starts as entered and is averaged by restocks.
+- **Restock** (quantity, total paid, paid from owner/drawer/GCash/Maya; drawer counts as cash out) and **Remove** (expired, damaged, given away, count fix).
+- History per item of every stock change.
+
+**Store Report (admins):** revenue, cost, profit after losses, margin per item, payment methods, low stock and losses; **Past closes** with expected vs counted and reopen. The Sales page shows Store next to court rentals and open play, and the CSV has `store` rows.
+
+Profit uses the item cost at the time of each sale, so later price changes never change past profit.
 
 ## Open questions
 

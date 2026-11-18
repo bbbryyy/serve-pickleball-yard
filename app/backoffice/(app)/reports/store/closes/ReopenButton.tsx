@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { reopenDay } from "../../../store-actions";
+import { reopenDay } from "../../../../store-actions";
 
 export function ReopenButton({ closeId }: { closeId: string }) {
   const [pending, start] = useTransition();

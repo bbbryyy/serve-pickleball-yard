@@ -32,11 +32,8 @@ export default async function StoreReportPage({ searchParams }: PageProps<"/back
   const byMethod = (["cash", "gcash", "maya"] as const).map((m) => ({ m, revenue: sum(r.daily.filter((d) => d.method === m), (d) => d.revenue) }));
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-steel uppercase">Store report</h1>
-        <p className="text-sm text-steel/60">Store sales by day · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}</p>
-      </div>
+    <div className="space-y-6">
+      <p className="text-sm text-steel/60">Store sales by day · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}</p>
       <RangePicker base="/backoffice/reports/store" presets={rangePresets(rules)} current={range} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

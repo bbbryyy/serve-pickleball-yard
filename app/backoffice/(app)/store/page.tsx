@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/auth";
 import { getCatalog, getStoreDay } from "@/lib/storeData";
 import { formatServiceDate } from "@/lib/schedule";
 import { createUserClient } from "@/lib/supabase/server";
+import { publicStorageUrl } from "@/lib/settings";
 import { SellScreen, type TodaySale } from "./SellScreen";
 
 export default async function SellPage() {
@@ -35,10 +36,10 @@ export default async function SellPage() {
       {closed && (
         <p className="rounded-lg bg-kitchen-light px-4 py-3 text-sm text-steel">
           {formatServiceDate(today)} is closed, so new sales can&apos;t be added. An admin can reopen it from{" "}
-          <Link href="/backoffice/store/closes" className="text-court underline">Past closes</Link>.
+          <Link href="/backoffice/reports/store/closes" className="text-court underline">Store Report → Past closes</Link>.
         </p>
       )}
-      <SellScreen items={catalog.filter((i) => i.active)} sales={todays} closed={closed} />
+      <SellScreen items={catalog.filter((i) => i.active).map((i) => ({ ...i, imageUrl: publicStorageUrl("store-images", i.image_path) }))} sales={todays} closed={closed} />
     </div>
   );
 }
