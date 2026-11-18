@@ -1,10 +1,10 @@
 # Serve Pickleball Yard — Court Booking PRD
 
-Last updated: Nov 15, 2026 · Living version: https://claude.ai/artifact/QcqZbwm8pHWDE2eQuzZgUL
+Last updated: Nov 18, 2026 · Living version: https://claude.ai/artifact/QcqZbwm8pHWDE2eQuzZgUL
 
 ## Overview
 
-Players book Serve's 2 indoor courts online by the hour, pay ₱400/hour by GCash or Maya QR, and staff confirm each payment by hand. Phase 1 (booking, payment checks, reports) is built and running locally. Phase 2 (open play queue) is not started.
+Players book Serve's 2 indoor courts online by the hour, pay ₱400/hour by GCash or Maya QR, and staff confirm each payment by hand. Phase 1 (booking, payment checks, reports) is live. Open play payments (sessions, a payment link for Reclub, walk-ins, refunds, and open play in reports) are built. The open play game queue is not started.
 
 **Problem.** Bookings today depend on staff answering messages and tracking slots by hand. Double bookings, unpaid holds, and no view of sales or peak hours are the result.
 
@@ -23,7 +23,7 @@ Players book Serve's 2 indoor courts online by the hour, pay ₱400/hour by GCas
 - Holds that expire unpaid, as a share of all online bookings.
 - Court utilization: hours booked ÷ bookable hours.
 
-**Not in phase 1:** player accounts, automatic payment verification, email or SMS notifications, refunds, discounts or memberships, different rates by time of day, and open play.
+**Not in phase 1:** player accounts, automatic payment verification, email or SMS notifications, refunds for court bookings, discounts or memberships, and different rates by time of day.
 
 ## Users and roles
 
@@ -159,20 +159,21 @@ Staff work from two pages: a bookings queue for checking payments and a schedule
 - Tap free hours to either:
   - Reserve for a walk-in or phone player (name, mobile, and paid in cash, GCash, or Maya). The booking is confirmed right away.
   - Set them as open play, with an optional note such as the fee per player. Or block them with a reason, such as maintenance or a private event.
-- Tap open play or blocked hours to make them bookable again.
+- Tap open play or blocked hours to make them bookable again. Hours that belong to an open play session can't be freed here; tapping them links to the session.
 - Tap a booking to see its reference, contact, status, and total, with a link to it in the queue.
 
 ## Admin features
 
-Admins get four more pages. Reports count confirmed bookings only, by play date in Philippine time.
+Admins get four more pages. Reports count confirmed bookings and approved open play payments, by play date in Philippine time.
 
 **Sales report (`/backoffice/reports/sales`)**
 
 - Date ranges: This week, This month, Last month, Last 90 days, Last 12 months, or custom dates.
-- Totals: revenue, bookings, hours booked, and average per booking.
-- Breakdowns by court, by payment method (GCash, Maya, cash), and by channel (online or walk-in), each with its share of revenue.
-- A daily table with revenue per court, bookings, hours, and revenue.
-- CSV export: date, court, payment method, channel, bookings, hours, revenue in PHP.
+- Totals: overall revenue (after open play refunds), court rentals (hours and bookings), and open play (players and sessions).
+- A reminder linking to sessions with open play refunds still owed.
+- Breakdowns: court rentals by court, and all sales by payment method (GCash, Maya, cash) and by channel (online or walk-in), each with its share of revenue.
+- A daily table with rental revenue per court, hours, open play revenue and players, refunds, and the day's total.
+- CSV export: date, type (court_rental, open_play, open_play_refund), court, payment method, channel, bookings, players, hours, revenue in PHP.
 
 **Analytics (`/backoffice/reports/analytics`)**
 
@@ -182,12 +183,14 @@ Admins get four more pages. Reports count confirmed bookings only, by play date 
 - Monthly hours booked, to show busy and slow seasons, with the best month highlighted.
 - Weekly hours booked, with weeks starting Monday.
 - Utilization per court: hours booked ÷ (21 bookable hours × days in range).
+- Open play: sessions held, players, average per session, fill rate, and a table of sessions in the range. The heatmap and utilization stay court rentals only.
 
 **Settings (`/backoffice/settings`)**
 
 - Rate per hour, payment hold length (5–1,440 minutes), booking window (1–52 weeks), and early bird and late night notice (0–168 hours).
 - Court hours: when early bird opens, when regular and late night start, and closing time after midnight. They must stay in that order.
 - GCash and Maya QR images (PNG, JPG, or WEBP, up to 2MB) with account names and numbers.
+- Open play: fee per player (₱120) and players per court (12). Changes apply to sessions created afterwards.
 
 **Users (`/backoffice/users`)**
 
@@ -222,20 +225,34 @@ Headings use Oswald and body text uses Inter. Blue panels carry white court line
 
 **Tech stack:** Next.js 16, Supabase (Postgres, Auth, Storage, pg_cron), Tailwind CSS 4, and Recharts. Hosting target: Vercel and Supabase.
 
-## Phase 2: open play queue
+## Open play
 
-Phase 2 adds open play: players register in Reclub, staff upload the final player list, and then run the court queue in the app. The game rotation rules still need to be decided.
+Players register for open play in Reclub. Our site handles the money: each session has a payment link that goes into the Reclub registration, and staff accept players from the Reclub waiting list once their payment is confirmed. Design: `docs/superpowers/specs/2026-11-18-open-play-payments-design.md`.
 
-- Admins create open play sessions with a date, time, courts, and fee per player. Phase 1 already lets staff mark court-hours as open play on the schedule, so they're closed to private booking.
-- Staff upload the session's player list exported from Reclub (CSV or Excel).
-- Staff check players in at the desk.
-- A "who's up next" board on a TV shows the queue. Players are assigned to courts as the courts free up.
+**Sessions (`/backoffice/open-play`, staff and admins)**
+
+- Create a session with a date, start and end time (whole hours, including late night), and courts. The court-hours are closed to private booking. Open play marks already on the schedule are taken over.
+- Each session saves the fee and players per court at creation, so later Settings changes don't affect it. Limit = players per court × courts.
+- The session page shows the payment link (with Copy link), players paid against the limit, and every payment with its status.
+- Add walk-in players who paid at the yard (cash, GCash, or Maya; mobile optional for cash) while spots are left.
+- Add a court to raise the limit. To change the date or time, cancel and create a new session.
+- Cancel a session before it starts. Payments already sent become Refund owed until staff mark them refunded; unpaid ones are cancelled.
+
+**Payment link (`/open-play/<code>`)**
+
+- Shows the session, fee, and spots left. One payment covers 1–12 players (never more than the spots left), each named as shown in Reclub, plus the payer's mobile and optional email.
+- Spots are held during the payment hold (30 minutes) and while the screenshot is being checked. Two players can't both take the last spot.
+- The link stops taking payments when the session starts, and shows when a session is full or cancelled.
+- Payment works like court bookings: GCash or Maya QR, screenshot upload, reference `SPY-OP-XXXX`. "My booking" shows open play status too.
+
+**Checking payments:** open play payments appear in the Bookings list with an Open play tag and count in the sidebar badge. Approve, reject, and extend hold work as for bookings.
+
+**Next: game queue (not started).** A "who's up next" board for a TV and court assignment as courts free up. The rotation rules still need to be decided.
 
 ## Open questions
 
 - [ ] Open play rotation: next 4 in line, winners stay (and for how many games), or paddle stack by groups?
-- [ ] Reclub export: which file format and columns does it produce?
-- [ ] Is the open play fee collected through the app, in Reclub, or at the desk?
+- [x] Open play fee: collected through the app's payment link (or at the desk for walk-ins).
 - [ ] Should players get booking confirmations by email or SMS?
 - [ ] Cancellation and refund policy for confirmed bookings.
 - [ ] Targets for the success measures in the Overview.

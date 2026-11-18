@@ -360,6 +360,9 @@ try {
     assert.equal(row.max_players, 12);
 
     const owedBefore = (await report(D7, D7)).refunds_owed;
+    const before = await report(manilaToday, manilaToday);
+    const refundedBefore = sumFor(before.open_play_refunds, manilaToday, "amount");
+    const refundPlayersBefore = sumFor(before.open_play_refunds, manilaToday, "players");
     assert.ifError((await staff.rpc("staff_cancel_open_play_session", { p_session_id: s.id, p_reason: "Rain" })).error);
     assert.equal((await report(D7, D7)).refunds_owed, owedBefore + 2);
     assert.ifError((await staff.rpc("staff_mark_open_play_refunded", { p_payment_id: a.id })).error);
@@ -370,8 +373,8 @@ try {
     assert.equal(sumFor(r.open_play, D7, "revenue"), 360, "approved revenue stays on the session date");
     assert.equal(r.refunds_owed, owedBefore);
     const today = await report(manilaToday, manilaToday);
-    assert.equal(sumFor(today.open_play_refunds, manilaToday, "amount"), 360, "only the approved payment is money out");
-    assert.equal(sumFor(today.open_play_refunds, manilaToday, "players"), 3);
+    assert.equal(sumFor(today.open_play_refunds, manilaToday, "amount") - refundedBefore, 360, "only the approved payment is money out");
+    assert.equal(sumFor(today.open_play_refunds, manilaToday, "players") - refundPlayersBefore, 3);
   });
 
   await test("staff cannot read report data", async () => {
