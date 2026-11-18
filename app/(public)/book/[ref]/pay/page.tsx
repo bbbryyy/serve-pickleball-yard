@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { Countdown } from "@/components/Countdown";
+import { QrPanels } from "@/components/QrPanels";
 import { getPublicBooking } from "@/lib/booking";
 import { formatPeso, groupSlots } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
@@ -31,30 +32,7 @@ export default async function PayPage({ params }: PageProps<"/book/[ref]/pay">) 
             Scan a QR code and send exactly <strong>{formatPeso(booking.total_amount)}</strong>. Put{" "}
             <strong>{booking.ref}</strong> in the message or note.
           </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {[
-              { name: "GCash", acct: gcash, ring: "border-[#0a6cff]", text: "text-[#0a4fb8]" },
-              { name: "Maya", acct: maya, ring: "border-[#00a651]", text: "text-[#00753a]" },
-            ].map(({ name, acct, ring, text }) => (
-              <div key={name} className={`card border-2 ${ring} p-4 text-center`}>
-                <p className={`font-display text-xl font-semibold ${text}`}>{name}</p>
-                {acct.qrUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={acct.qrUrl} alt={`${name} QR code`} className="mx-auto mt-3 aspect-square w-full max-w-[240px] rounded object-contain" />
-                ) : (
-                  <div className="mx-auto mt-3 flex aspect-square w-full max-w-[240px] items-center justify-center rounded bg-paper p-4 text-sm text-steel/60">
-                    QR code coming soon. Ask our staff for payment details.
-                  </div>
-                )}
-                {(acct.name || acct.number) && (
-                  <p className="mt-3 text-sm text-steel">
-                    {acct.name}
-                    {acct.number && <span className="block font-semibold">{acct.number}</span>}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <QrPanels gcash={gcash} maya={maya} />
         </section>
 
         <aside className="space-y-4">
