@@ -10,6 +10,7 @@ export type SiteSettings = {
   gcash: PaymentAccount;
   maya: PaymentAccount;
   courts: { id: number; name: string }[];
+  openPlay: { fee: number; playersPerCourt: number };
 };
 
 export function publicStorageUrl(bucket: string, path: string | null): string | null {
@@ -51,5 +52,6 @@ async function loadSiteSettings(): Promise<SiteSettings> {
     gcash: { qrUrl: publicStorageUrl("qr-codes", s?.gcash_qr_path), name: s?.gcash_name, number: s?.gcash_number },
     maya: { qrUrl: publicStorageUrl("qr-codes", s?.maya_qr_path), name: s?.maya_name, number: s?.maya_number },
     courts: courts ?? [],
+    openPlay: { fee: s?.open_play_fee ?? 120, playersPerCourt: s?.open_play_players_per_court ?? 12 },
   };
 }

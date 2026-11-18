@@ -44,6 +44,19 @@ export function SettingsForm({ s, gcashQr, mayaQr }: { s: S; gcashQr: string | n
         <p className="text-xs text-steel/60 sm:col-span-2">Rate changes apply to new bookings only.</p>
       </section>
 
+      <section className="card grid gap-4 p-5 sm:grid-cols-2">
+        <h2 className="text-sm font-bold text-steel uppercase sm:col-span-2">Open play</h2>
+        <div>
+          <label className="label" htmlFor="op_fee">Fee per player (₱)</label>
+          <input id="op_fee" name="open_play_fee" type="number" min={1} max={10000} defaultValue={num("open_play_fee")} className="input" />
+        </div>
+        <div>
+          <label className="label" htmlFor="op_ppc">Players per court</label>
+          <input id="op_ppc" name="open_play_players_per_court" type="number" min={1} max={50} defaultValue={num("open_play_players_per_court")} className="input" />
+        </div>
+        <p className="text-xs text-steel/60 sm:col-span-2">Changes apply to sessions created after you save.</p>
+      </section>
+
       <section className="card grid gap-4 p-5 sm:grid-cols-4">
         <h2 className="text-sm font-bold text-steel uppercase sm:col-span-4">Court hours</h2>
         <HourSelect name="early_start" label="Early bird opens" value={num("early_start")} from={0} to={12} />
