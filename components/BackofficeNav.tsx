@@ -7,13 +7,14 @@ const ITEMS = [
   { href: "/backoffice", label: "Bookings", admin: false },
   { href: "/backoffice/schedule", label: "Schedule", admin: false },
   { href: "/backoffice/open-play", label: "Open Play", admin: false },
+  { href: "/backoffice/store", label: "Store", admin: false },
   { href: "/backoffice/reports/sales", label: "Sales", admin: true },
   { href: "/backoffice/reports/analytics", label: "Analytics", admin: true },
   { href: "/backoffice/settings", label: "Settings", admin: true },
   { href: "/backoffice/users", label: "Users", admin: true },
 ];
 
-export function BackofficeNav({ isAdmin, pendingCount }: { isAdmin: boolean; pendingCount: number }) {
+export function BackofficeNav({ isAdmin, pendingCount, storeAlerts = 0 }: { isAdmin: boolean; pendingCount: number; storeAlerts?: number }) {
   const path = usePathname();
   return (
     <nav className="flex gap-1 overflow-x-auto lg:flex-col">
@@ -30,6 +31,9 @@ export function BackofficeNav({ isAdmin, pendingCount }: { isAdmin: boolean; pen
             {i.label}
             {i.href === "/backoffice" && pendingCount > 0 && (
               <span className="rounded-full bg-surround px-2 text-xs text-white">{pendingCount}</span>
+            )}
+            {i.href === "/backoffice/store" && storeAlerts > 0 && (
+              <span className="rounded-full bg-surround px-2 text-xs text-white" title="Low stock and days not closed">{storeAlerts}</span>
             )}
           </Link>
         );
