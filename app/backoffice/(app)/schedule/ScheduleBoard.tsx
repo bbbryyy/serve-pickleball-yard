@@ -8,7 +8,8 @@ import { blockSlots, createWalkIn, unblockSlots, type ActionResult } from "../..
 
 export type SlotDetail =
   | { kind: "booking"; ref: string; name: string; mobile: string | null; status: string; source: string; total: number }
-  | { kind: "block" | "open_play"; reason: string };
+  | { kind: "block" | "open_play"; reason: string }
+  | { kind: "session"; reason: string; sessionId: string };
 
 const STATUS: Record<string, string> = { pending_payment: "Waiting for payment", for_verification: "For verification", confirmed: "Confirmed" };
 
@@ -43,8 +44,10 @@ export function ScheduleBoard({
         title:
           d?.kind === "booking"
             ? `${d.ref} · ${d.name} · ${STATUS[d.status] ?? d.status}`
-            : d?.kind === "open_play"
-              ? `Open play: ${d.reason}`
+            : d?.kind === "session"
+              ? "Open play session · tap to open"
+              : d?.kind === "open_play"
+                ? `Open play: ${d.reason}`
               : d
                 ? `Blocked: ${d.reason}`
                 : undefined,
@@ -55,7 +58,7 @@ export function ScheduleBoard({
 
   const onCellClick = (key: string, cell: GridCell) => {
     setResult({});
-    if (cell.state === "booked" || cell.state === "pending") {
+    if (cell.state === "booked" || cell.state === "pending" || details[key]?.kind === "session") {
       setFocus(key);
       return;
     }
@@ -117,6 +120,13 @@ export function ScheduleBoard({
             </p>
             <p className="text-sm text-steel/70">{STATUS[focused.status] ?? focused.status} · {focused.source === "walk_in" ? "Walk-in" : "Online"} · {formatPeso(focused.total)}</p>
             <a className="btn-ghost w-full" href={`/backoffice?status=${focused.status}&q=${focused.ref}`}>Open in bookings</a>
+            <button className="text-xs text-steel/60 underline" onClick={() => setFocus(null)}>Close</button>
+          </>
+        ) : focused?.kind === "session" ? (
+          <>
+            <h2 className="font-display text-xl font-semibold text-steel uppercase">Open play session</h2>
+            <p className="text-sm text-steel/70">These hours belong to an open play session. See who has paid, add walk-ins, or cancel it from the session page.</p>
+            <a className="btn-ghost w-full" href={`/backoffice/open-play/${focused.sessionId}`}>Open session</a>
             <button className="text-xs text-steel/60 underline" onClick={() => setFocus(null)}>Close</button>
           </>
         ) : mode === "blocked" ? (

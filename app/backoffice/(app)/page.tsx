@@ -3,7 +3,9 @@ import { requireStaff } from "@/lib/auth";
 import { groupSlots } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 import { createServiceClient, createUserClient } from "@/lib/supabase/server";
+import { PAYMENT_COLUMNS, toStaffPayments, type StaffOpenPlayPayment } from "@/lib/openPlayAdmin";
 import { BookingRow, type QueueBooking } from "./BookingRow";
+import { OpenPlayPaymentRow } from "./OpenPlayPaymentRow";
 
 const isPast = (d: Date) => d.getTime() < Date.now();
 
@@ -35,12 +37,26 @@ export default async function QueuePage({ searchParams }: PageProps<"/backoffice
       : status === "pending_payment"
         ? query.order("hold_expires_at", { ascending: true })
         : query.order("created_at", { ascending: false });
-  const [{ data, error }, counts] = await Promise.all([
+  // open play payments in the same tab (refund_owed/refunded are handled on the session page)
+  const safeQ = q.replace(/[%,()]/g, "");
+  let opQuery = supabase.from("open_play_payments").select(PAYMENT_COLUMNS).eq("status", status);
+  if (safeQ) {
+    const { data: byName } = await supabase.from("open_play_players").select("payment_id").ilike("name", `%${safeQ}%`).limit(100);
+    const ids = (byName ?? []).map((r) => r.payment_id);
+    opQuery = opQuery.or([`ref.ilike.%${safeQ}%`, `mobile.ilike.%${safeQ}%`, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])].join(","));
+  }
+  const [{ data, error }, counts, { data: opData, error: opError }, opCounts] = await Promise.all([
     query.limit(100),
     supabase.from("bookings").select("status").in("status", ["for_verification", "pending_payment"]),
+    opQuery.order("created_at", { ascending: false }).limit(100),
+    supabase.from("open_play_payments").select("status").in("status", ["for_verification", "pending_payment"]),
   ]);
   if (error) throw new Error(error.message);
-  const countOf = (s: string) => counts.data?.filter((r) => r.status === s).length ?? 0;
+  if (opError) throw new Error(opError.message);
+  const countOf = (s: string) =>
+    (counts.data?.filter((r) => r.status === s).length ?? 0) + (opCounts.data?.filter((r) => r.status === s).length ?? 0);
+  const openPlay = await toStaffPayments(opData ?? [], rules);
+  const opSortKey = new Map((opData as { id: string; proof_uploaded_at: string | null; hold_expires_at: string | null; created_at: string }[] | null ?? []).map((r) => [r.id, r]));
 
   // private proof images: short-lived signed URLs (server-side, after the staff check)
   const storage = createServiceClient().storage.from("payment-proofs");
@@ -73,6 +89,21 @@ export default async function QueuePage({ searchParams }: PageProps<"/backoffice
     }),
   );
 
+  // one list, ordered the way each tab already sorts bookings
+  type Item = { kind: "booking"; b: QueueBooking; key: string } | { kind: "open_play"; p: StaffOpenPlayPayment; key: string };
+  const keyFor = (proof: string | null, hold: string | null, created: string) =>
+    status === "for_verification" ? proof ?? created : status === "pending_payment" ? hold ?? created : created;
+  const merged: Item[] = [
+    ...rows.map((b) => ({ kind: "booking" as const, b, key: keyFor(b.proofUploadedAt, b.holdExpiresAt, b.createdAt) })),
+    ...openPlay.map((p) => {
+      const r = opSortKey.get(p.id)!;
+      return { kind: "open_play" as const, p, key: keyFor(r.proof_uploaded_at, r.hold_expires_at, r.created_at) };
+    }),
+  ].sort((a, b) => {
+    const asc = status === "for_verification" || status === "pending_payment";
+    return asc ? Date.parse(a.key) - Date.parse(b.key) : Date.parse(b.key) - Date.parse(a.key);
+  });
+
   return (
     <div className="mx-auto max-w-6xl">
       {sp.denied && (
@@ -103,15 +134,13 @@ export default async function QueuePage({ searchParams }: PageProps<"/backoffice
           );
         })}
       </div>
-      {rows.length === 0 ? (
+      {merged.length === 0 ? (
         <div className="card p-10 text-center text-sm text-steel/60">
           {status === "for_verification" ? "No payments to check right now." : "No bookings here."}
         </div>
       ) : (
         <ul className="space-y-3">
-          {rows.map((b) => (
-            <BookingRow key={b.id} b={b} />
-          ))}
+          {merged.map((m) => (m.kind === "booking" ? <BookingRow key={m.b.id} b={m.b} /> : <OpenPlayPaymentRow key={m.p.id} p={m.p} showSession />))}
         </ul>
       )}
     </div>

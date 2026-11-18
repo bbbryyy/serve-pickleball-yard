@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/backoffice", label: "Bookings", admin: false },
   { href: "/backoffice/schedule", label: "Schedule", admin: false },
+  { href: "/backoffice/open-play", label: "Open Play", admin: false },
   { href: "/backoffice/reports/sales", label: "Sales", admin: true },
   { href: "/backoffice/reports/analytics", label: "Analytics", admin: true },
   { href: "/backoffice/settings", label: "Settings", admin: true },

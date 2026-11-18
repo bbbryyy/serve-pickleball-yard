@@ -7,10 +7,11 @@ import { signOut } from "../actions";
 export default async function BackofficeLayout({ children }: LayoutProps<"/backoffice">) {
   const user = await requireStaff();
   const supabase = await createUserClient();
-  const { count } = await supabase
-    .from("bookings")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "for_verification");
+  const [{ count: bookingsToCheck }, { count: openPlayToCheck }] = await Promise.all([
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("status", "for_verification"),
+    supabase.from("open_play_payments").select("id", { count: "exact", head: true }).eq("status", "for_verification"),
+  ]);
+  const count = (bookingsToCheck ?? 0) + (openPlayToCheck ?? 0);
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
@@ -23,7 +24,7 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
             {user.fullName} · <span className="font-semibold text-ball uppercase">{user.role}</span>
           </div>
         </div>
-        <BackofficeNav isAdmin={user.role === "admin"} pendingCount={count ?? 0} />
+        <BackofficeNav isAdmin={user.role === "admin"} pendingCount={count} />
         <form action={signOut} className="mt-3 lg:absolute lg:bottom-4 lg:left-4 lg:right-4">
           <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-white/60 hover:bg-white/10 hover:text-white">Sign out</button>
         </form>
