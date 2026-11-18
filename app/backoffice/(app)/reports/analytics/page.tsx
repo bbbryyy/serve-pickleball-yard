@@ -2,8 +2,11 @@ import { Metric, RangePicker } from "@/components/RangePicker";
 import { requireAdmin } from "@/lib/auth";
 import { capacityHours, getReport, rangePresets, resolveRange, sum } from "@/lib/reports";
 import { addDays, formatHour, formatPeso, formatServiceDate, mondayOf, monthShort, serviceHours } from "@/lib/schedule";
+import { formatSessionTime } from "@/lib/openPlay";
 import { getSiteSettings } from "@/lib/settings";
 import { BarSeries } from "./Charts";
+
+const nowMs = () => Date.now();
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -12,7 +15,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
   const sp = await searchParams;
   const { rules, courts } = await getSiteSettings();
   const range = resolveRange(sp, rules, "12m");
-  const { daily, heat } = await getReport(range.from, range.to);
+  const { daily, heat, open_play_sessions: opSessions } = await getReport(range.from, range.to);
 
   const hours = sum(daily, (r) => r.hours);
   const capacity = capacityHours(range.from, range.to, rules, courts.length);
@@ -57,11 +60,16 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
     return { name: c.name, hours: h, pct: perCourtCap ? Math.round((h / perCourtCap) * 100) : 0 };
   });
 
+  // open play: sessions that went ahead (not cancelled) and have started
+  const heldSessions = opSessions.filter((x) => x.status === "open" && Date.parse(x.starts_at) <= nowMs());
+  const opPlayers = sum(heldSessions, (x) => x.players);
+  const opCapacity = sum(heldSessions, (x) => x.max_players);
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold text-steel uppercase">Analytics</h1>
-        <p className="text-sm text-steel/60">Confirmed bookings · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}</p>
+        <p className="text-sm text-steel/60">Court rentals and open play · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}</p>
       </div>
       <RangePicker base="/backoffice/reports/analytics" presets={rangePresets(rules)} current={range} />
 
@@ -121,6 +129,44 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
           <p className="mb-2 text-xs text-steel/60">Weeks start on Monday.</p>
           <BarSeries data={weeklyData} />
         </div>
+      </div>
+
+      <div className="card p-4">
+        <h2 className="text-sm font-bold text-steel uppercase">Open play</h2>
+        <p className="mb-3 text-xs text-steel/60">Sessions that have started in this range. Players counts approved payments and walk-ins.</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Metric label="Sessions held" value={heldSessions.length.toLocaleString()} />
+          <Metric label="Players" value={opPlayers.toLocaleString()} />
+          <Metric label="Avg per session" value={heldSessions.length ? (opPlayers / heldSessions.length).toFixed(1) : "—"} />
+          <Metric label="Fill rate" value={opCapacity ? `${Math.round((opPlayers / opCapacity) * 100)}%` : "—"} sub={opCapacity ? `${opPlayers} of ${opCapacity} spots` : undefined} />
+        </div>
+        {opSessions.length > 0 && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead className="text-left text-xs text-steel/60">
+                <tr>
+                  <th className="py-1.5">Session</th>
+                  <th className="py-1.5 text-right">Courts</th>
+                  <th className="py-1.5 text-right">Players</th>
+                  <th className="py-1.5 text-right">Full</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opSessions.map((x) => (
+                  <tr key={x.session_id} className="border-t border-kitchen-light">
+                    <td className="py-1.5">
+                      <a href={`/backoffice/open-play/${x.session_id}`} className="text-court hover:underline">{formatSessionTime(new Date(x.starts_at), new Date(x.ends_at), rules)}</a>
+                      {x.status === "cancelled" && <span className="ml-2 text-xs text-steel/60">Cancelled</span>}
+                    </td>
+                    <td className="py-1.5 text-right">{x.courts}</td>
+                    <td className="py-1.5 text-right">{x.players} / {x.max_players}</td>
+                    <td className="py-1.5 text-right">{x.max_players ? Math.round((x.players / x.max_players) * 100) : 0}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="card p-4">

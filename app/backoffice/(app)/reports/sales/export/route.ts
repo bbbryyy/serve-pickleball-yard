@@ -8,11 +8,13 @@ export async function GET(request: Request) {
   const from = url.searchParams.get("from") ?? "";
   const to = url.searchParams.get("to") ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return new Response("Bad range", { status: 400 });
-  const { daily } = await getReport(from, to);
+  const { daily, open_play: openPlay, open_play_refunds: refunds } = await getReport(from, to);
   const lines = [
-    "date,court,payment_method,channel,bookings,hours,revenue_php",
-    ...daily.map((r) => [r.date, `Court ${r.court}`, r.method, r.source, r.bookings, r.hours, r.revenue].join(",")),
-  ];
+    "date,type,court,payment_method,channel,bookings,players,hours,revenue_php",
+    ...daily.map((r) => [r.date, "court_rental", `Court ${r.court}`, r.method, r.source, r.bookings, "", r.hours, r.revenue].join(",")),
+    ...openPlay.map((r) => [r.date, "open_play", "", r.method, r.source, r.payments, r.players, "", r.revenue].join(",")),
+    ...refunds.map((r) => [r.date, "open_play_refund", "", "", "", r.payments, r.players, "", -r.amount].join(",")),
+  ].sort((a, b) => (a.startsWith("date,") ? -1 : b.startsWith("date,") ? 1 : a < b ? -1 : 1));
   return new Response(lines.join("\n") + "\n", {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
