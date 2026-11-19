@@ -18,7 +18,7 @@ export default async function HomePage() {
     <>
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-court-deep text-white">
-        <Image src="/brand/court.jpg" alt="" fill priority className="-z-10 object-cover opacity-45" sizes="100vw" />
+        <Image src="/brand/court.jpg" alt="" fill fetchPriority="high" loading="eager" className="-z-10 object-cover opacity-45" sizes="100vw" />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-court-deep via-court-deep/80 to-transparent" />
         <div className="mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <p className="font-display text-sm tracking-[0.25em] text-ball uppercase">Indoor pickleball · 2 courts</p>
