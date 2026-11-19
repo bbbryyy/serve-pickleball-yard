@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { maxGroupSize } from "@/lib/openPlay";
 import type { ActionResult } from "../../../actions";
 import { addCourt, addWalkIns, cancelSession } from "../../../open-play-actions";
@@ -11,7 +11,13 @@ function Result({ r }: { r: ActionResult }) {
 }
 
 export function CopyLink({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
+  const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const report = (text: string, failed: boolean) => {
+    window.clearTimeout(timer.current); // repeat clicks restart the timer instead of stacking
+    setMessage({ text, failed });
+    timer.current = window.setTimeout(() => setMessage(null), 2500);
+  };
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <code className="min-w-0 truncate rounded-lg border border-kitchen bg-white px-3 py-1.5 text-sm text-court">{url}</code>
@@ -19,13 +25,20 @@ export function CopyLink({ url }: { url: string }) {
         type="button"
         className="btn-ghost px-3 py-1.5"
         onClick={async () => {
-          await navigator.clipboard.writeText(url);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          try {
+            await navigator.clipboard.writeText(url);
+            report("Link copied", false);
+          } catch {
+            report("Couldn't copy. Select the link and copy it.", true);
+          }
         }}
       >
-        {copied ? "Copied" : "Copy link"}
+        Copy link
       </button>
+      {/* the confirmation is a live region outside the button, so screen readers announce it */}
+      <span role="status" className={`text-sm transition-opacity ${message ? "opacity-100" : "opacity-0"} ${message?.failed ? "text-red-700" : "text-court"}`}>
+        {message?.text ?? ""}
+      </span>
     </div>
   );
 }

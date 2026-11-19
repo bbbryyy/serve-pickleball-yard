@@ -94,20 +94,21 @@ export function SellScreen({ items, sales, closed }: { items: PosItem[]; sales: 
               ))}
             </ul>
           )}
-          <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Paid with">
-            {(["cash", "gcash", "maya"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={method === m}
-                onClick={() => setMethod(m)}
-                className={`rounded-full border px-2 py-1.5 text-sm font-semibold ${method === m ? "border-court bg-court text-white" : "border-kitchen bg-white text-steel"}`}
-              >
-                {PAYMENT_LABEL[m]}
-              </button>
-            ))}
-          </div>
+          {/* native radios: arrow keys move between methods, and screen readers announce the group */}
+          <fieldset>
+            <legend className="sr-only">Paid with</legend>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(["cash", "gcash", "maya"] as const).map((m) => (
+                <label
+                  key={m}
+                  className="cursor-pointer rounded-full border border-kitchen bg-white px-2 py-1.5 text-center text-sm font-semibold text-steel has-[:checked]:border-court has-[:checked]:bg-court has-[:checked]:text-white has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-court"
+                >
+                  <input type="radio" name="pos-method" value={m} checked={method === m} onChange={() => setMethod(m)} className="sr-only" />
+                  {PAYMENT_LABEL[m]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <button
             type="button"
             className="btn-lime w-full py-3"

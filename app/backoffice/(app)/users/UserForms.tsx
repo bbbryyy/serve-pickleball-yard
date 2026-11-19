@@ -42,7 +42,7 @@ export function NewUserForm() {
       <h2 className="text-sm font-bold text-steel uppercase sm:col-span-2">Add a user</h2>
       <input name="full_name" placeholder="Full name" className="input" required aria-label="Full name" />
       <input name="email" type="email" placeholder="Email" className="input" required aria-label="Email" />
-      <input name="password" type="text" placeholder="Temporary password (10+ characters)" className="input" required minLength={10} autoComplete="off" aria-label="Temporary password" />
+      <input name="password" type="text" placeholder="Temporary password (10+ characters)" className="input" required minLength={10} autoComplete="new-password" aria-label="Temporary password" />
       <select name="role" className="input" defaultValue="staff" aria-label="Role">
         <option value="staff">Staff</option>
         <option value="admin">Admin</option>
