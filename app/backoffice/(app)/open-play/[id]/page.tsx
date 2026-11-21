@@ -7,7 +7,10 @@ import { PAYMENT_COLUMNS, toStaffPayments } from "@/lib/openPlayAdmin";
 import { formatPeso } from "@/lib/schedule";
 import { getSiteSettings } from "@/lib/settings";
 import { createUserClient } from "@/lib/supabase/server";
+import { QueueTable, roundTime } from "@/components/QueueTable";
+import type { SavedQueue } from "@/lib/openPlayQueue";
 import { OpenPlayPaymentRow } from "../../OpenPlayPaymentRow";
+import { MarkRound, RedoRest } from "./QueueControls";
 import { AddCourt, CancelSession, CopyLink, WalkInForm } from "./SessionControls";
 
 const nowMs = () => Date.now();
@@ -22,12 +25,14 @@ export default async function SessionPage({ params, searchParams }: PageProps<"/
   const supabase = await createUserClient();
   const { rules, courts } = await getSiteSettings();
 
-  const [{ data: s }, { data: payments, error }, { data: held }, { data: limit }] = await Promise.all([
+  const [{ data: s }, { data: payments, error }, { data: held }, { data: limit }, { data: savedQueue }] = await Promise.all([
     supabase.from("open_play_sessions").select("*, open_play_session_courts(court_id)").eq("id", id).maybeSingle(),
     supabase.from("open_play_payments").select(PAYMENT_COLUMNS).eq("session_id", id).order("created_at"),
     supabase.rpc("open_play_held", { p_session_id: id }),
     supabase.rpc("open_play_limit", { p_session_id: id }),
+    supabase.from("open_play_queues").select("*").eq("session_id", id).maybeSingle(),
   ]);
+  const queue = savedQueue as SavedQueue | null;
   if (!s) notFound();
   if (error) throw new Error(error.message);
 
@@ -87,6 +92,49 @@ export default async function SessionPage({ params, searchParams }: PageProps<"/
           </ul>
         )}
       </section>
+
+      {!cancelled && (
+        <section id="queue" className="card space-y-3 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-steel uppercase">
+              Queue{queue && <span className="font-normal normal-case text-steel/60"> · {queue.players.length} players · {queue.minutes_per_game} min games</span>}
+            </h2>
+            {queue && (
+              <div className="flex gap-2">
+                <Link href={`/open-play/${s.code}/queue`} target="_blank" className="btn-ghost px-3 py-1.5 text-sm">
+                  Players&apos; view
+                </Link>
+                <Link href={`/open-play/${s.code}/queue?print=1`} target="_blank" className="btn-ghost px-3 py-1.5 text-sm">
+                  Print
+                </Link>
+              </div>
+            )}
+          </div>
+          {queue ? (
+            <>
+              <div className="overflow-x-auto">
+                <QueueTable
+                  courts={[...new Set(queue.rounds.flatMap((r) => r.games.map((g) => g.court)))].sort()}
+                  rounds={queue.rounds}
+                  playedThrough={queue.played_through}
+                  action={ended ? null : <MarkRound sessionId={s.id} playedThrough={queue.played_through} total={queue.rounds.length} />}
+                />
+              </div>
+              {queue.played_through >= queue.rounds.length && <p className="text-sm text-steel/60">All rounds played.</p>}
+              {!ended && queue.played_through < queue.rounds.length && (
+                <RedoRest sessionId={s.id} players={queue.players} fromLabel={roundTime(queue.rounds[queue.played_through].start)} />
+              )}
+              {!ended && queue.played_through >= queue.rounds.length && (
+                <MarkRound sessionId={s.id} playedThrough={queue.played_through} total={queue.rounds.length} />
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-steel/60">
+              No queue yet. Open Ask Dink and ask for the &quot;Queue for open play today&quot;, then tap Save to session.
+            </p>
+          )}
+        </section>
+      )}
 
       {!cancelled && !ended && (
         <section className="card space-y-3 p-5">

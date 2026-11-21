@@ -2,18 +2,38 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import type { QueueDraft } from "@/lib/agent/queue";
 import type { ProposalCard } from "@/lib/agent/tools";
 import { formatPeso } from "@/lib/schedule";
 import { Dink } from "./Dink";
+import { QueueCard } from "./QueueCard";
 
-type Msg = { role: "user" | "assistant"; content: string; cards?: ProposalCard[] };
+type Msg = { role: "user" | "assistant"; content: string; cards?: ProposalCard[]; queue?: QueueDraft };
 
-const CHIPS = ["Tonight after 7", "2 hours this Saturday", "How do I pay?", "Open play?"];
-const GREETING = "Hi! I'm Dink. Tell me when you want to play and I'll find open courts.";
 const MAX_CHARS = 500;
 
+export type DinkMode = {
+  endpoint: string;
+  subtitle: string;
+  greeting: string;
+  chips: string[];
+  placeholder: string;
+  thinking: string;
+  note: string;
+};
+
+export const PLAYER_MODE: DinkMode = {
+  endpoint: "/api/agent",
+  subtitle: "Finds open courts in seconds",
+  greeting: "Hi! I'm Dink. Tell me when you want to play and I'll find open courts.",
+  chips: ["Tonight after 7", "2 hours this Saturday", "How do I pay?", "Open play?"],
+  placeholder: "Ask about courts, hours, paying…",
+  thinking: "Dink is checking the courts…",
+  note: "Dink uses an AI service to read your message. Don't share personal details here.",
+};
+
 /** The "Ask Dink" chat panel: full screen on phones, a side panel on larger screens. */
-export function DinkChat({ onClose }: { onClose: () => void }) {
+export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void; mode?: DinkMode }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -36,16 +56,16 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
     setInput("");
     setPending(true);
     try {
-      const res = await fetch("/api/agent", {
+      const res = await fetch(mode.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.map(({ role, content: c }) => ({ role, content: c })) }),
       });
-      const data = (await res.json()) as { reply: string; cards?: ProposalCard[]; limited?: boolean };
-      setMessages([...next, { role: "assistant", content: data.reply, cards: data.cards }]);
+      const data = (await res.json()) as { reply: string; cards?: ProposalCard[]; queue?: QueueDraft; limited?: boolean };
+      setMessages([...next, { role: "assistant", content: data.reply, cards: data.cards, queue: data.queue }]);
       if (data.limited) setEnded(true);
     } catch {
-      setMessages([...next, { role: "assistant", content: "Dink couldn't answer just now. You can still book on the Book a court page." }]);
+      setMessages([...next, { role: "assistant", content: "Dink couldn't answer just now. Try again in a moment." }]);
     } finally {
       setPending(false);
       inputRef.current?.focus();
@@ -69,7 +89,7 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
         <Dink state={pending ? "think" : "wave"} className="w-10 shrink-0" />
         <div className="min-w-0 flex-1">
           <h2 id="dink-chat-title" className="font-semibold">Ask Dink</h2>
-          <p className="text-xs text-white/70">Finds open courts in seconds</p>
+          <p className="text-xs text-white/70">{mode.subtitle}</p>
         </div>
         <button type="button" onClick={onClose} className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white" aria-label="Close Ask Dink">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -79,15 +99,16 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
       </header>
 
       <div ref={listRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 py-4" aria-live="polite">
-        <p className="max-w-[88%] self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel">{GREETING}</p>
+        <p className="max-w-[88%] self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel">{mode.greeting}</p>
         {messages.map((m, i) =>
           m.role === "user" ? (
             <p key={i} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-court px-3 py-2 text-sm whitespace-pre-line text-white">
               {m.content}
             </p>
           ) : (
-            <div key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel">
+            <div key={i} className="max-w-[96%] self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel">
               <p className="whitespace-pre-line">{m.content}</p>
+              {m.queue && <QueueCard draft={m.queue} />}
               {m.cards && m.cards.length > 0 && (
                 <ul className="mt-2 space-y-2">
                   {m.cards.map((c, j) => (
@@ -113,7 +134,7 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
         )}
         {pending && (
           <p className="self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel/60" role="status">
-            Dink is checking the courts…
+            {mode.thinking}
           </p>
         )}
         {ended && (
@@ -126,7 +147,7 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
       <div className="space-y-2 border-t border-kitchen-light bg-white px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {messages.length === 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
-            {CHIPS.map((c) => (
+            {mode.chips.map((c) => (
               <button key={c} type="button" onClick={() => send(c)} className="shrink-0 rounded-full border border-kitchen bg-white px-3 py-1 text-xs font-semibold text-steel hover:border-court">
                 {c}
               </button>
@@ -155,14 +176,14 @@ export function DinkChat({ onClose }: { onClose: () => void }) {
                 send(input);
               }
             }}
-            placeholder="Ask about courts, hours, paying…"
+            placeholder={mode.placeholder}
             className="input max-h-28 min-h-10 resize-none rounded-2xl"
           />
           <button type="submit" disabled={pending || ended || !input.trim()} className="btn-primary shrink-0 rounded-full px-4">
             Send
           </button>
         </form>
-        <p className="text-center text-[11px] text-steel/60">Dink uses an AI service to read your message. Don&apos;t share personal details here.</p>
+        <p className="text-center text-[11px] text-steel/60">{mode.note}</p>
       </div>
     </section>
   );

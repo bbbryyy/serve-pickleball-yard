@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackofficeDink } from "@/components/BackofficeDink";
 import { BackofficeNav } from "@/components/BackofficeNav";
 import { requireStaff } from "@/lib/auth";
 import { getStoreAlerts } from "@/lib/storeData";
@@ -26,6 +27,7 @@ export default async function BackofficeLayout({ children }: LayoutProps<"/backo
             {user.fullName} · <span className="font-semibold text-ball uppercase">{user.role}</span>
           </div>
         </div>
+        {process.env.AGENT_ENABLED !== "false" && <BackofficeDink firstName={user.fullName.split(" ")[0]} isAdmin={user.role === "admin"} />}
         <BackofficeNav isAdmin={user.role === "admin"} pendingCount={count} posAlerts={store.unclosed.length + store.late.length} lowStock={user.role === "admin" ? store.low : 0} />
         <form action={signOut} className="mt-3 lg:absolute lg:bottom-4 lg:left-4 lg:right-4">
           <button className="w-full rounded-lg px-3 py-2 text-left text-sm text-white/60 hover:bg-white/10 hover:text-white">Sign out</button>

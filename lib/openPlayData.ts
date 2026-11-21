@@ -51,3 +51,20 @@ export const OPEN_PLAY_STATUS_TEXT: Record<OpenPlayStatus, { label: string; cls:
   refund_owed: { label: "Refund on the way", cls: "bg-surround/15 text-surround-dark", body: "This session was cancelled. Our staff will send your refund." },
   refunded: { label: "Refunded", cls: "bg-kitchen-light text-steel", body: "This session was cancelled and your payment was refunded." },
 };
+
+export type PublicOpenPlayQueue = {
+  service_date: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  minutes_per_game: number;
+  rounds: import("./agent/queue").QueueRound[];
+  played_through: number;
+  updated_at: string;
+};
+
+/** A session's saved game queue for the players' view (first names only). */
+export async function getOpenPlayQueuePublic(code: string): Promise<PublicOpenPlayQueue | null> {
+  const { data } = await createServiceClient().rpc("get_open_play_queue_public", { p_code: code });
+  return (data as PublicOpenPlayQueue[] | null)?.[0] ?? null;
+}
