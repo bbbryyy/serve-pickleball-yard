@@ -13,7 +13,6 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/backoffice/open-play", label: "Open Play", admin: false },
       { href: "/backoffice/reports/sales", label: "Sales", admin: true },
       { href: "/backoffice/reports/analytics", label: "Analytics", admin: true },
-      { href: "/backoffice/settings", label: "Settings", admin: true },
     ],
   },
   {
@@ -24,7 +23,13 @@ const GROUPS: { label: string; items: Item[] }[] = [
       { href: "/backoffice/reports/store", label: "Store Report", admin: true },
     ],
   },
-  { label: "Users", items: [{ href: "/backoffice/users", label: "Users", admin: true }] },
+  {
+    label: "Admin",
+    items: [
+      { href: "/backoffice/settings", label: "Settings", admin: true },
+      { href: "/backoffice/users", label: "Users", admin: true },
+    ],
+  },
 ];
 
 export function BackofficeNav({

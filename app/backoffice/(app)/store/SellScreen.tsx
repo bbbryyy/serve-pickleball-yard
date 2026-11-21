@@ -124,7 +124,7 @@ export function SellScreen({ items, sales, closed }: { items: PosItem[]; sales: 
               })
             }
           >
-            {pending ? "Saving…" : `Save sale · ${formatPeso(total)}`}
+            {pending ? "Checking out…" : `Checkout · ${formatPeso(total)}`}
           </button>
           {(result.error || result.ok) && (
             <p role="status" className={`text-sm ${result.error ? "text-red-700" : "text-court"}`}>{result.error ?? result.ok}</p>

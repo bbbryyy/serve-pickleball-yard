@@ -182,3 +182,13 @@ html {
     margin-right: var(--dink-pane-w);
   }
 }
+/* two-column pages stack while the Dink pane is open, side panel first, so the main view gets the full width */
+@media (min-width: 1024px) {
+  html[data-dink-pane="open"] .dink-stack {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-dink-pane="open"] .dink-stack > .dink-first {
+    order: -1;
+    position: static;
+  }
+}

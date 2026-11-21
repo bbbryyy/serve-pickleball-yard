@@ -98,7 +98,7 @@ export function ScheduleBoard({
   })();
 
   return (
-    <div className="grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="dink-stack grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_320px]">
       <div>
         <WeekGrid
           days={week.days}
@@ -114,7 +114,7 @@ export function ScheduleBoard({
         <div className="mt-3"><GridLegend staff /></div>
       </div>
 
-      <div className="card h-fit space-y-3 p-5 @4xl:sticky @4xl:top-8">
+      <div className="dink-first card h-fit space-y-3 p-5 @4xl:sticky @4xl:top-8">
         {focused?.kind === "booking" ? (
           <>
             <h2 className="font-display text-xl font-semibold text-steel uppercase">Booking</h2>
