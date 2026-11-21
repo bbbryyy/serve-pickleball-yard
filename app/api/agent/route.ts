@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { checkConversation, isRateLimited, LIMIT_TEXT, LIMITS, type ChatMessage } from "@/lib/agent/limits";
 import { buildSystemPrompt } from "@/lib/agent/prompt";
-import { chooseProvider, errorKind, runAnthropic, runOpenAI } from "@/lib/agent/runners";
+import { runAndLog } from "@/lib/agent/run";
+import { chooseProvider } from "@/lib/agent/runners";
 import { playerToolDefs, type RunContext } from "@/lib/agent/tools";
 import { getSiteSettings } from "@/lib/settings";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -25,9 +26,6 @@ function ipHash(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   return createHash("sha256").update(`${process.env.AGENT_IP_SALT ?? "serve"}:${ip}`).digest("hex").slice(0, 32);
 }
-
-/** The chat shows plain text: drop markdown bold and heading marks the model sometimes adds. */
-const plainText = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,6}\s+/gm, "").trim();
 
 export async function POST(request: Request) {
   const provider = chooseProvider();
@@ -59,44 +57,17 @@ export async function POST(request: Request) {
   const { data: run, error: runError } = await db.from("agent_runs").insert({ ip_hash: hash }).select("id").single();
   if (runError || !run) return reply(500, { reply: LIMIT_TEXT.error });
 
-  const started = Date.now();
   const settings = await getSiteSettings();
   const now = new Date();
   const ctx: RunContext = { runId: run.id, settings, now, toolsUsed: new Set(), cards: [], sawNoOptions: false };
-  let steps = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-
-  try {
-    const runModel = provider === "openai" ? runOpenAI : runAnthropic;
-    const result = await runModel({
-      system: buildSystemPrompt({ now, rules: settings.rules, courts: settings.courts, openPlayFee: settings.openPlay.fee }),
-      messages,
-      tools: playerToolDefs(ctx),
-      maxIterations: LIMITS.maxIterations,
-      maxTokens: LIMITS.maxTokens,
-    });
-    steps = result.steps;
-    inputTokens = result.inputTokens;
-    outputTokens = result.outputTokens;
-    const refused = result.refused;
-    let text = refused ? "I can only help with courts, booking and the yard." : result.text;
-    text = plainText(text);
-    if (!text) text = ctx.cards.length ? "Here are open courts you can book:" : LIMIT_TEXT.error;
-
-    const outcome = refused ? "declined" : ctx.cards.length ? "proposed" : ctx.sawNoOptions ? "no_options" : "answered";
-    await db
-      .from("agent_runs")
-      .update({ steps, tools: [...ctx.toolsUsed], input_tokens: inputTokens, output_tokens: outputTokens, latency_ms: Date.now() - started, outcome })
-      .eq("id", run.id);
-    return reply(200, { reply: text, cards: ctx.cards });
-  } catch (err) {
-    const kind = errorKind(err);
-    await db
-      .from("agent_runs")
-      .update({ steps, tools: [...ctx.toolsUsed], input_tokens: inputTokens, output_tokens: outputTokens, latency_ms: Date.now() - started, outcome: "error", error: kind })
-      .eq("id", run.id);
-    console.error("dink error", kind, err instanceof Error ? err.message : err);
-    return reply(502, { reply: LIMIT_TEXT.error });
-  }
+  const text = await runAndLog({
+    db,
+    provider,
+    system: buildSystemPrompt({ now, rules: settings.rules, courts: settings.courts, openPlayFee: settings.openPlay.fee }),
+    messages,
+    tools: playerToolDefs(ctx),
+    ctx,
+  });
+  if (text === null) return reply(502, { reply: LIMIT_TEXT.error });
+  return reply(200, { reply: text, cards: ctx.cards });
 }
