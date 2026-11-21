@@ -10,6 +10,13 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
   const courtId = Number(sp.court) || courts[0]?.id || 1;
   const court = courts.find((c) => c.id === courtId) ?? courts[0];
   const week = await getWeek(court.id, typeof sp.week === "string" ? sp.week : undefined, rules);
+  // hours suggested by Dink ("Book these hours"): preselect the ones that are still free
+  const wanted = typeof sp.slots === "string" ? new Set(sp.slots.split(",")) : new Set<string>();
+  const initialSelection = Object.entries(week.cells)
+    .filter(([, c]) => c.state === "available" && wanted.has(c.iso))
+    .map(([key, c]) => [key, c.iso] as [string, string]);
+  const via = typeof sp.via === "string" && /^[0-9a-f-]{36}$/.test(sp.via) ? sp.via : undefined;
+  const suggestionTaken = wanted.size > 0 && initialSelection.length < wanted.size;
   const href = (q: { court?: number; week?: string | null }) =>
     `/book?court=${q.court ?? court.id}&week=${q.week ?? week.monday}`;
 
@@ -54,7 +61,10 @@ export default async function BookPage({ searchParams }: PageProps<"/book">) {
       </div>
 
       <BookingPanel
-        key={court.id}
+        key={`${court.id}-${via ?? ""}`}
+        initialSelection={initialSelection}
+        via={via}
+        suggestionTaken={suggestionTaken}
         court={court}
         week={week}
         rules={rules}

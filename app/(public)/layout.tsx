@@ -9,7 +9,8 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
-      <FloatingDink />
+      {/* AGENT_ENABLED=false turns the Ask Dink assistant off (kill switch) */}
+      <FloatingDink chatEnabled={process.env.AGENT_ENABLED !== "false"} />
       <SectionAnimator />
     </>
   );

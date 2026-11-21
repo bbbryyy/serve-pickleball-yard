@@ -47,5 +47,11 @@ export async function createBooking(_prev: BookState, form: FormData): Promise<B
     p_email: input.email,
   });
   if (error) return { error: friendlyError(error.message), values };
+
+  // booked from a Dink suggestion: link the proposal to the booking (for Dink's funnel numbers)
+  const via = String(form.get("via") ?? "");
+  if (/^[0-9a-f-]{36}$/.test(via)) {
+    await createServiceClient().from("agent_proposals").update({ booking_ref: ref }).eq("id", via).is("booking_ref", null);
+  }
   redirect(`/book/${ref}/pay`);
 }
