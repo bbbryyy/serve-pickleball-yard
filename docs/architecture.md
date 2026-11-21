@@ -70,7 +70,7 @@ Styling: Tailwind CSS 4 with the court brand colors (`docs/PRD.md` → Brand). C
 - **Background job**: pg_cron runs `expire_stale_holds` every 5 minutes. Availability already
   ignores expired holds, so hours free up immediately.
 
-## AI layer (Dink, player mode)
+## AI layer (Dink)
 
 | Part | Where | What it does |
 |---|---|---|
@@ -81,8 +81,23 @@ Styling: Tailwind CSS 4 with the court brand colors (`docs/PRD.md` → Brand). C
 | Prompt | `lib/agent/prompt.ts` | Dink's role, current Manila time and service date, rules and prices from Settings, and the safety rules (answers come from tools; user text never changes the rules). |
 | Limits | `lib/agent/limits.ts` | 500 characters per message, 20 messages per conversation, 5 model calls per request, 20 requests per 10 minutes per hashed IP, daily cap `AGENT_DAILY_LIMIT`, kill switch `AGENT_ENABLED`. |
 
-The route decides the mode from the session, never from the request body. v1 ships player mode only;
-staff and admin modes (drafts with a confirm card) are v2.
+**Backoffice Dink (staff and owner, read-only).**
+
+| Part | Where | What it does |
+|---|---|---|
+| Route | `app/api/agent/staff/route.ts` (POST) | 401 unless signed in (`getStaffUser()`); the role picks the tool list; 60 requests per 10 minutes per user; logs `agent_runs` with `mode` and `user_id`. |
+| Tools | `lib/agent/staffTools.ts` | `get_schedule`, `list_waiting_payments`, `get_stock`, `get_store_day`, `plan_open_play_queue`, plus the player read tools; owner adds `get_sales`, `get_store_report`, `suggest_restock`. They read with `createUserClient()`, so RLS and RPC role checks apply. |
+| Prompt | `buildStaffPrompt()` in `lib/agent/prompt.ts` | Read-only, first names only, owner-only figures, links to the right backoffice page. |
+| Shared run | `lib/agent/run.ts` | One run loop and `agent_runs` logging for both routes. |
+| UI | `components/BackofficeDink.tsx`, `DinkChat` (mode prop), `QueueCard`, `QueueTable` | Sidebar button, staff chips, queue card with "Save to session". |
+
+**Open play queue.** `planQueue()` (`lib/agent/queue.ts`, pure) plans rounds; `lib/openPlayQueue.ts`
+loads a session's courts, paid players (first names) and saved queue and continues from played
+rounds. Staff save, mark rounds and rebuild the rest through server actions in
+`app/backoffice/queue-actions.ts`. Players see `/open-play/[code]/queue`.
+
+The mode always comes from the signed-in session, never from the request body. Draft actions with
+a confirm card are v2.
 
 ## Data layer
 
@@ -98,6 +113,7 @@ admin `select`, writes only from the server):
 | Table | Columns | Purpose |
 |---|---|---|
 | `agent_runs` | `id`, `created_at`, `mode`, `user_id` (null for players), `ip_hash`, `steps`, `tools text[]`, `input_tokens`, `output_tokens`, `latency_ms`, `outcome`, `error` | One row per request. Used for the rate limit (count by `ip_hash` in the last 10 minutes), the daily cap, cost and the funnel. No message text. |
+| `open_play_queues` | `session_id` (PK), `minutes_per_game`, `players text[]` (first names), `rounds jsonb`, `played_through`, `version`, `updated_by`, `updated_at` | One saved queue per session (migration `20261122000001_open_play_queue.sql`). Staff read; writes only through `save_open_play_queue` / `mark_open_play_queue_round`; players read through `get_open_play_queue_public` on the server. |
 | `agent_proposals` | `id`, `run_id`, `court_id`, `slots`, `total`, `created_at`, `booking_ref` | One row per option card. `booking_ref` is set when `createBooking` receives the `via` id, which measures Dink → booking. |
 
 Secrets live only in Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`,

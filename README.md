@@ -29,7 +29,7 @@ Tailwind CSS 4, Zod 4, Vitest, Claude (Anthropic SDK), Vercel.
 The work after that (open play, store, and everything for this assignment: validation, PRD, spec,
 architecture, AI rules, CI, Dink, monitoring) is in small commits, each named with its phase.
 
-## Dink, the AI assistant (player mode)
+## Dink, the AI assistant
 
 Dink is not a general chatbot. It answers only from tools that read the yard's live data and rules:
 
@@ -46,10 +46,22 @@ Safety and cost limits: 500 characters per message, 20 messages per conversation
 stored; `agent_runs` keeps only counts, tools used, tokens, time taken and the outcome. The
 backoffice **Analytics** page shows Dink chats, bookings that came from Dink, errors and tokens.
 
+**Dink in the backoffice (staff and owner, read-only).** An "Ask Dink" button in the sidebar answers
+"today's schedule", "waiting for payment", "low stock" and "store sales today". The owner also gets
+sales for any range, store profit, and restock suggestions from the last 14 days. Staff Dink sees
+first names only and changes nothing; it links to the right page instead.
+
+**Open play queue.** Ask Dink for "queue for open play today". It plans a fair doubles rotation from
+the paid players: fewest games play next, and partners are mixed. Staff tap **Save to session**. On
+the session page they mark rounds played and use **Redo the rest** when players leave or arrive.
+Played rounds stay, and game counts carry over. Players watch `/open-play/[code]/queue` on a TV or
+their phones.
+
 Provider: Claude (`claude-haiku-5-5`) by default. An OpenAI-compatible endpoint is a switchable
 backup (`AGENT_PROVIDER=openai`) with the same tools and limits.
 
-Code: `app/api/agent/route.ts`, `lib/agent/`, `components/DinkChat.tsx`.
+Code: `app/api/agent/route.ts` (players), `app/api/agent/staff/route.ts` (backoffice), `lib/agent/`,
+`lib/openPlayQueue.ts`, `components/DinkChat.tsx`, `components/BackofficeDink.tsx`.
 
 ## Run locally
 
@@ -114,10 +126,10 @@ Monitoring: Vercel Web Analytics for page views, and the Dink card on the backof
 1. **0:00 Problem (15s).** Bookings used to come by message; staff checked each hour by hand.
 2. **0:15 Booking (25s).** Home page, then the booking grid: pick hours, see the ₱ total and the 30-minute hold.
 3. **0:40 Dink (45s).** Open Dink and ask "2 hours next Saturday evening". Show the option cards, tap **Book these hours** and show the hours already picked. Then ask "book me for free" and show that Dink declines.
-4. **1:25 Backoffice (20s).** Staff confirm a payment; the Analytics page shows Dink chats and bookings from Dink.
+4. **1:25 Backoffice (20s).** Ask Dink "Waiting for payment", then "Queue for open play today" and tap Save to session; show the players' view.
 5. **1:45 Engineering (15s).** The GitHub Actions run (lint, typecheck, tests, secret scan) and the spec's review log.
 
 ## Next (v2)
 
-Dink for staff and admins (drafting bookings, open play and restock with a confirm card) and
-Messenger as a channel. See the v2 GitHub issue.
+Dink draft actions with a confirm card (walk-ins, blocks, restocks) and Messenger as a channel. See
+the v2 GitHub issue.

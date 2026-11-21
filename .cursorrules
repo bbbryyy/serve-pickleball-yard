@@ -1,7 +1,7 @@
 # Serve Pickleball Yard: rules for AI assistants (full version in CLAUDE.md)
 
 Stack: Next.js 16 App Router, React 19, TypeScript, Tailwind 4, Supabase (Postgres + RLS, Auth,
-Storage), Zod 4, Vitest. Dink AI: @anthropic-ai/sdk, model from AGENT_MODEL (claude-haiku-5-5); OpenAI-compatible backup via AGENT_PROVIDER=openai.
+Storage), Zod 4, Vitest. Dink AI: @anthropic-ai/sdk, model from AGENT_MODEL (claude-haiku-5-5); OpenAI-compatible backup via AGENT_PROVIDER=openai. Player route app/api/agent; staff/owner route app/api/agent/staff (read-only, first names only, role from session).
 
 - Next.js 16 differs from older versions: read node_modules/next/dist/docs/ before writing code.
 - Writes only through server actions and security-definer RPCs. Public pages never touch tables.

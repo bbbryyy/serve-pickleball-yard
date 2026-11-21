@@ -26,12 +26,9 @@ function Result({ r }: { r: ActionResult }) {
 export function InventoryManager({ items, selectedId, history }: { items: InvItem[]; selectedId: string | null; history: HistoryRow[] }) {
   const selected = items.find((i) => i.id === selectedId) ?? null;
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="dink-stack grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="card overflow-x-auto p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-steel uppercase">Items</h2>
-          <Link href="/backoffice/inventory" className="btn-ghost px-3 py-1.5">Add item</Link>
-        </div>
+        <h2 className="mb-2 text-sm font-bold text-steel uppercase">Items</h2>
         <table className="w-full min-w-[540px] text-sm">
           <thead className="text-left text-xs text-steel/60">
             <tr>
@@ -67,7 +64,7 @@ export function InventoryManager({ items, selectedId, history }: { items: InvIte
         </table>
       </div>
 
-      <div className="space-y-4">
+      <div className="dink-first space-y-4">
         <ItemForm item={selected} />
         {selected?.kind === "shelf" && <StockForm item={selected} />}
         {selected?.kind === "shelf" && (
@@ -142,7 +139,14 @@ function ItemForm({ item }: { item: InvItem | null }) {
         });
       }}
     >
-      <h2 className="text-sm font-bold text-steel uppercase">{item ? `Edit ${item.name}` : "Add item"}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-steel uppercase">{item ? `Edit ${item.name}` : "Add item"}</h2>
+        {item && (
+          <Link href="/backoffice/inventory" className="text-sm text-court hover:underline">
+            Cancel
+          </Link>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <ItemImage url={preview} name={name || "Item"} className="h-20 w-20 shrink-0 rounded-xl" />
         <label className="btn-ghost cursor-pointer px-3 py-1.5 text-sm">

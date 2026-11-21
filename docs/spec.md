@@ -6,9 +6,11 @@ Related: `docs/PRD.md` (product requirements), `docs/prd-one-page.md` (one-page 
 `docs/architecture.md` (architecture and data flow), `docs/superpowers/specs/` (detailed designs for
 open play payments and the store)
 
-**Scope of this version.** v1 (this submission) is **Dink player mode** on the public site, on top of
-the booking, payment, open play and store modules that are already live. Dink staff and admin modes
-are **v2** and are kept here so the design stays in one place; they are marked _(v2)_.
+**Scope of this version.** v1 (this submission) is **Dink player mode** on the public site plus
+**read-only Dink for staff and the owner** in the backoffice, with an **open play queue** staff can
+save to a session, on top of the booking, payment, open play and store modules that are already
+live. Draft actions with a confirm card (walk-ins, blocks, restocks) and Messenger are **v2**; they
+are kept here so the design stays in one place and are marked _(v2)_.
 
 ---
 
@@ -49,7 +51,9 @@ AI assistant.
 | Store POS and inventory | Quick sales at the desk, stock log, low-stock alerts, daily cash/GCash/Maya close, profit | Live |
 | Reports and analytics | Sales by source and method, court use, busiest hours, store revenue and profit | Live |
 | **Dink player mode** | Answers questions, finds free hours, proposes a booking, checks booking status | **v1, this sprint** |
-| Dink staff and admin modes | Schedule lookups, drafts with a confirm card, stock and sales questions | v2 (GitHub issue) |
+| **Dink staff and owner modes** | Schedule, payments waiting, stock, store day; owner: sales, store profit, restock suggestions | **v1, read-only** |
+| **Open play queue** | Dink plans a fair doubles queue; staff save it, mark rounds, rebuild the rest; players' view | **v1** |
+| Dink draft actions | Walk-ins, blocks, restocks drafted with a confirm card | v2 (GitHub issue) |
 
 ### Goals
 
@@ -118,18 +122,19 @@ open play and store revenue alongside court rentals.
 
 ### Dink principles
 
-1. **Same access as the user.** Player mode uses only public, read-only tools. _(v2)_ Staff and
+1. **Same access as the user.** Player mode uses only public, read-only tools. Staff and
    admin modes run with the signed-in user's session (`createUserClient`), so RLS and the role
    checks in every RPC apply exactly as on the screens. Each mode gets only its own tool list.
 2. **Read freely, write only with confirmation.** Read tools run immediately. No tool writes a
    booking, payment or stock change. Player mode's `propose_booking` only saves a proposal row;
-   the player books through the normal form. _(v2)_ Draft tools return a draft action shown as a
+   the player books through the normal form. Staff mode's `plan_open_play_queue` only plans; staff
+   save the queue with a button on the card (a server action). _(v2)_ Draft tools return a draft action shown as a
    confirm card; only Confirm calls the existing server action.
 3. **Answers come from tools.** Hours, prices, availability, and bookings are always read from the
    system in the same turn, never from the model's memory.
 4. **Minimum data to the model.** In player mode, name, mobile, and email are entered in the normal
-   form, never in the chat, and no tool returns them. _(v2)_ In staff mode, tools return booking
-   references and first names only when needed.
+   form, never in the chat, and no tool returns them. In staff mode, tools return booking
+   references and first names only when needed; never mobile numbers or emails.
 
 ### Goal of Dink player mode (v1)
 
@@ -345,14 +350,14 @@ redirects to the payment page.
 
 Values live in `lib/agent/limits.ts` (`LIMITS`).
 
-| Limit | Player (v1) | Staff / admin (v2) |
+| Limit | Player (v1) | Staff / admin (v1) |
 |---|---|---|
-| Model calls (tool loop) per request | 5 | 8 |
-| Output tokens per model call | `LIMITS.maxTokens` | 800 |
-| Characters per message | 500 | 1,000 |
-| Messages per conversation | 20 | 40 |
-| Rate limit | 20 requests / 10 min per hashed IP | 60 requests / 10 min per user |
-| Daily cap | `AGENT_DAILY_LIMIT` runs (default 500) | shared |
+| Model calls (tool loop) per request | 5 | 5 |
+| Output tokens per model call | `LIMITS.maxTokens` | `LIMITS.maxTokens` |
+| Characters per message | 500 | 500 |
+| Messages per conversation | 20 | 20 |
+| Rate limit | 20 requests / 10 min per hashed IP | 60 requests / 10 min per signed-in user |
+| Daily cap | `AGENT_DAILY_LIMIT` runs (default 500) | not counted (signed-in staff only) |
 
 **Rate limit storage.** Vercel functions keep no memory between requests, so the route counts recent
 `agent_runs` rows in Postgres: `ip_hash = sha256(ip + AGENT_IP_SALT)` and `created_at` in the last
@@ -367,44 +372,63 @@ logged with outcome `limited` and gets the matching friendly message.
   names that `get_open_play_payment_public` returns) before the result reaches the model.
 - Notice on the Dink panel: "Dink uses an AI service to read your message and check open courts.
   Don't share personal details in the chat."
-- _(v2)_ Staff mode sends booking first names to the model only when a tool needs them; staff are
-  told this in the backoffice.
+- Staff mode sends first names to the model only from the tools that need them (schedule, payments
+  waiting, queue), never mobile numbers or emails. The backoffice panel says so.
+- The players' queue view shows first names only (the queue stores first names, with a last-name
+  initial when two players share one).
 
-### Staff mode _(v2)_
+### Staff mode (v1, read-only)
 
-Entry: an "Ask Dink" button in the backoffice header opening a side panel. Typical asks: "What's
-free tonight?", "Who's still waiting for payment?", "Walk-in Juan, Court 2, 7–9pm, cash", "Block
-Court 1 tomorrow 6–8am for maintenance", "What's low in the store?".
+Entry: an "Ask Dink" button in the backoffice sidebar opens the panel beside the current page.
+Route `app/api/agent/staff/route.ts`: 401 unless signed in; the role comes from `getStaffUser()`,
+never from the request. Tools read with `createUserClient()`.
 
-| Tool | Kind | What it does |
-|---|---|---|
-| `find_options` | read | Same as player mode, with staff scheduling rules (`validateSlot` staff option) |
-| `list_bookings` | read | Bookings for a date or status (ref, court, hours, status, first name) |
-| `draft_walk_in` | draft | Validates court, slots, name, payment method, and mobile rule; confirm card calls `createWalkIn` |
-| `draft_block` | draft | Validates court, slots, reason; confirm card calls `blockSlots` |
-| `get_stock` | read | Shelf stock on hand and low-stock flags from `store_catalog` |
-| `get_store_day` | read | Today's sales by method and whether earlier days are unclosed |
+| Tool | What it does |
+|---|---|
+| `get_schedule` | Bookings per court for a date (ref, first name, status, source), open play and blocked hours |
+| `list_waiting_payments` | Unpaid holds (with hold end) and screenshots to check, for courts and open play; links to the bookings queue |
+| `get_stock` | Shelf stock on hand and low flags (`store_catalog`) |
+| `get_store_day` | A store day's money by method, whether it's closed, earlier unclosed days |
+| `plan_open_play_queue` | Plans the doubles queue for a session from paid players, minus absent, plus walk-ins; keeps played rounds of a saved queue; shown as a card with "Save to session" |
+| `find_options`, `find_open_play`, `check_booking`, `get_info` | Same as player mode |
 
-Staff mode can't approve or reject payments: staff must look at the screenshot themselves on the
-bookings screen. Dink links to the booking instead.
+Staff mode can't approve or reject payments: staff look at the screenshot themselves on the
+bookings screen. Dink links to it instead.
 
-### Admin mode _(v2)_
+### Admin mode (v1, read-only)
 
 Everything in staff mode, plus:
 
-| Tool | Kind | What it does |
-|---|---|---|
-| `get_sales` | read | Sales, utilization, and busiest hours for a date range (`getReport`, `report_summary`) |
-| `get_store_report` | read | Store revenue, cost, profit, and best sellers for a range (`store_report`) |
-| `suggest_restock` | read | Days of stock left per shelf item from recent sales, and suggested restock quantities |
-| `draft_restock` | draft | Validates item, quantity, total cost, paid from; confirm card calls `addStock` (admin-only, like Inventory) |
-| `draft_stock_correction` | draft | Validates item, quantity change, reason; confirm card calls `correctStock` |
+| Tool | What it does |
+|---|---|
+| `get_sales` | Sales for a range: rentals, open play, store sales and profit, refunds, busiest hours (`report_summary`) |
+| `get_store_report` | Store revenue, cost, profit, best sellers, losses (`store_report`) |
+| `suggest_restock` | Days of stock left per shelf item from the last 14 days, and how many to buy |
 
-`suggest_restock` uses a pure function in `lib/agent/inventory.ts`: average daily units sold over
-the last 14 days, days of stock left = on hand ÷ daily average, and a suggested quantity to cover a
-target number of days (default 14) above the item's low-stock level. v2 adds an `agent_actions`
-table (`id`, `run_id`, `user_id`, `kind`, `payload jsonb`, `status` drafted / confirmed / dismissed
-/ failed, `result`, `created_at`, `decided_at`) and the `drafted` outcome.
+`suggest_restock` uses `suggestRestock()` in `lib/agent/inventory.ts`: units sold ÷ 14 = per day;
+days left = on hand ÷ per day; buy = per day × target days (default 14) + low-stock level + 1 − on
+hand. Items that haven't sold and aren't low are left out.
+
+### Open play queue (v1)
+
+- **Planner** `planQueue()` in `lib/agent/queue.ts` (pure, seeded by the session id). Each round
+  fills 4 players per court. Fewest games play next, then whoever waited longest. Within a round,
+  players are swapped between courts and teams are split to keep repeat partners and opponents
+  low. Rounds = session length ÷ minutes per game (default 15).
+- **Saved queue** table `open_play_queues` (one per session: players, rounds, `played_through`,
+  version). RPCs `save_open_play_queue` and `mark_open_play_queue_round` check `is_staff()` and
+  that the session is open and not over.
+- **During play** on the session page: Mark played / Undo; "Redo the rest" removes players who
+  left and adds arrivals, keeps played rounds, and carries game counts over.
+- **Players' view** `/open-play/[code]/queue` via `get_open_play_queue_public` (server only):
+  now playing, up next, all rounds; refreshes every 30 seconds; `?print=1` prints it.
+
+### Draft actions _(v2)_
+
+`draft_walk_in`, `draft_block`, `draft_restock`, `draft_stock_correction`: a confirm card that calls
+the existing server action. v2 adds an `agent_actions` table (`id`, `run_id`, `user_id`, `kind`,
+`payload jsonb`, `status` drafted / confirmed / dismissed / failed, `result`, `created_at`,
+`decided_at`) and the `drafted` outcome.
 
 ---
 
@@ -513,21 +537,38 @@ table (`id`, `run_id`, `user_id`, `kind`, `payload jsonb`, `status` drafted / co
     (past dates, ranges over 14 days, bad durations, bad references), limits, and the prompt builder
     (today's PH service date and rate from Settings) pass.
 
-### Staff and admin modes _(v2)_
+### Staff and admin modes (v1)
+
+- Given no signed-in staff user, when anyone posts to `/api/agent/staff`, then it returns 401.
+- Given a staff user asks "Waiting for payment", when Dink answers, then it lists holds and
+  screenshots from `list_waiting_payments` with first names only and links to the bookings queue,
+  and approves nothing.
+- Given a staff user, when they ask for sales this week or a restock, then Dink says it's for the
+  owner: those tools aren't in the staff tool list (and the RPCs reject non-admins).
+- Given an admin asks "what should I restock?", when Dink answers, then each item shows days of
+  stock left matching `suggest_restock`.
+- Given tonight's session with paid players, when staff ask for the queue, then a card shows every
+  round with no player twice in a round and game counts within one; nothing is saved until staff
+  tap "Save to session".
+- Given a saved queue with rounds played, when staff remove a player and add a late one with "Redo
+  the rest", then played rounds stay unchanged, the removed player is in no later round, and the
+  late player catches up.
+- Given a session code, when anyone opens `/open-play/[code]/queue`, then they see first names only;
+  anon can't read `open_play_queues` or call the queue RPCs (`npm run check:permissions`).
+
+### Staff draft actions _(v2)_
 
 - Given a staff user types "Walk-in Juan, Court 2, 7–9pm, cash", when Dink drafts it, then a confirm
   card appears; Confirm creates the booking through `createWalkIn`; Dismiss changes nothing.
-- Given a staff user, when they ask for sales or a restock, then Dink refuses: those tools are
-  admin-only.
-- Given an admin asks "what should I restock?", when Dink answers, then each item shows days of
-  stock left matching `suggest_restock`.
 
 ---
 
 ## Testing, monitoring and rollout
 
 **Tests.** Existing Vitest suites cover schedule rules, open play, store math, and error messages.
-Dink tests are pure (no network or database) and live in `lib/agent/agent.test.ts`. Manual checks
+Dink tests are pure (no network or database) and live in `lib/agent/agent.test.ts` and
+`lib/agent/staff.test.ts` (queue fairness, partner mixing, same seed same queue, redo after players
+leave and arrive, restock math, first names). Manual checks
 before release: a fully booked evening returns alternatives; a proposal booked by someone else fails
 cleanly at the form; an injection attempt is declined; the kill switch hides Dink; the friendly
 rate-limit message appears.
@@ -550,7 +591,7 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 - Dink on every public page or only `/book` at first? Proposed: every page via `FloatingDink`, with
   booking-focused chips on `/book`.
 - Taglish: mirror the player, or English by default? Proposed: mirror.
-- After launch: Messenger first, or Dink staff mode?
+- After launch: Messenger first, or Dink draft actions?
 - Problem statement: were reservations tracked in a spreadsheet or only in message threads? Confirm
   in the owner interview.
 
@@ -569,4 +610,5 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 | 2026-11-21 | Claude Code | Spec named the Vercel AI SDK; the implementation uses the Anthropic TypeScript SDK | Constraints updated to `@anthropic-ai/sdk` |
 | 2026-11-21 | Claude Code (testing) | The course's OpenAI gateway timed out from the developer's network, so one provider was a single point of failure | Claude stays the default; an OpenAI-compatible backup was added behind `AGENT_PROVIDER`, with the same tools and limits |
 | 2026-11-21 | Owner (testing the preview) | Dink couldn't find the open play session set for next week | Added `find_open_play`, which reads sessions from the availability grid and hides ones that already ended; the prompt points open play questions to it |
+| 2026-11-21 | Owner | Dink should help staff and the owner too, and make the open play queue; the queue must be saved to the session once play starts | Read-only staff and owner modes moved from v2 to v1; added `plan_open_play_queue`, the `open_play_queues` table, Mark played / Redo the rest, and the players' view. Draft actions stay v2 |
 | | Owner | _(add the owner's feedback after reading)_ | |

@@ -59,9 +59,11 @@ Before saying work is done: `npm run lint`, `npx tsc --noEmit`, `npm test`.
    `SUPABASE_SERVICE_ROLE_KEY` to the browser. CI runs gitleaks.
 6. **Mockups before redesigns.** Show new screens or visual changes as a mockup and wait for the
    owner's go-ahead before changing UI code.
-7. **Dink safety.** Dink states availability, prices and bookings only from a tool result in the
-   same turn. Player tools are read-only; no player name, mobile or email reaches the model; chat
-   text is never stored (`agent_runs` keeps counts and outcomes only).
+7. **Dink safety.** Dink states availability, prices, bookings and figures only from a tool result
+   in the same turn. All tools are read-only; the only write is staff tapping "Save to session" on a
+   queue card. Player mode sends no names, mobiles or emails to the model; staff mode sends first
+   names only. The mode comes from the signed-in session, never the request. Chat text is never
+   stored (`agent_runs` keeps counts and outcomes only).
 8. **Tests for rules.** Pure logic (schedule, store math, `lib/agent/*`) gets Vitest tests with no
    network or database.
 

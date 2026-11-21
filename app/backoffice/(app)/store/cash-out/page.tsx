@@ -15,7 +15,7 @@ export default async function CashOutPage() {
   const total = (outs ?? []).reduce((t, o) => t + o.amount, 0);
 
   return (
-    <div className="grid max-w-4xl gap-5 lg:grid-cols-2">
+    <div className="grid max-w-4xl gap-5 @2xl:grid-cols-2">
       <section className="card p-5">
         <h2 className="mb-1 text-sm font-bold text-steel uppercase">Cash out</h2>
         <p className="mb-3 text-sm text-steel/70">Money taken from the drawer, like ice or change for a bill. It&apos;s taken off today&apos;s expected cash.</p>

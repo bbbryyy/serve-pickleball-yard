@@ -36,14 +36,14 @@ export default async function StoreReportPage({ searchParams }: PageProps<"/back
       <p className="text-sm text-steel/60">Store sales by day · {formatServiceDate(range.from)} – {formatServiceDate(range.to)}</p>
       <RangePicker base="/backoffice/reports/store" presets={rangePresets(rules)} current={range} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4">
         <Metric label="Revenue" value={peso(revenue)} />
         <Metric label="Cost of items sold" value={peso(cost)} />
         <Metric label="Profit" value={peso(profit)} sub={`${pct(profit, revenue)} margin, after losses`} />
         <Metric label="Losses" value={peso(losses)} sub="Expired, damaged, given away" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 @2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="card overflow-x-auto p-4">
           <h2 className="mb-2 text-sm font-bold text-steel uppercase">By item</h2>
           <table className="w-full min-w-[480px] text-sm">

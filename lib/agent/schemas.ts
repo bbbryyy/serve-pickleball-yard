@@ -46,3 +46,36 @@ export function checkDateRange(from: string, to: string, today: string, lastBook
   if (from > lastBookable) return "too_far";
   return null;
 }
+
+// ---- staff and owner tools (backoffice Dink)
+
+const nameList = z.array(z.string().trim().min(1).max(40)).max(30);
+
+export const DateInput = z.object({
+  date: isoDate.optional().describe("Service date, YYYY-MM-DD. Leave out for today."),
+});
+
+export const DateRangeInput = z.object({
+  date_from: isoDate.describe("First service date, YYYY-MM-DD"),
+  date_to: isoDate.describe("Last service date, YYYY-MM-DD (at most 366 days after date_from)"),
+});
+
+export const PlanQueueInput = z.object({
+  date: isoDate.optional().describe("Service date of the open play session. Leave out for today."),
+  session_id: z.string().uuid().optional().describe("Only when the day has more than one session: the id from an earlier answer"),
+  minutes_per_game: z.number().int().min(5).max(60).default(15).describe("Minutes per game, default 15"),
+  absent: nameList.default([]).describe("Paid players who aren't playing (first names as listed)"),
+  walk_ins: nameList.default([]).describe("Extra players to add (first names)"),
+});
+
+export const RestockInput = z.object({
+  target_days: z.number().int().min(3).max(60).default(14).describe("Days of stock to cover, default 14"),
+});
+
+/** Inclusive days in a range; null if reversed or over the limit. */
+export function rangeDays(from: string, to: string, max: number): number | null {
+  if (to < from) return null;
+  let n = 1;
+  for (let d = from; d < to; d = addDays(d, 1)) if (++n > max) return null;
+  return n;
+}
