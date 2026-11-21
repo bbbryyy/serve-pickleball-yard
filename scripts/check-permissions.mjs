@@ -29,4 +29,8 @@ show("anon read open_play_players", await pub.from("open_play_players").select("
 show("anon staff_create_open_play_session", await pub.rpc("staff_create_open_play_session", { p_slots: [], p_court_ids: [1] }));
 show("anon create_open_play_payment", await pub.rpc("create_open_play_payment", { p_code: "X", p_player_names: ["Ab"], p_mobile: "09171234567" }));
 show("anon get_open_play_public", await pub.rpc("get_open_play_public", { p_code: "X" }));
+show("anon read open_play_queues", await pub.from("open_play_queues").select("session_id"));
+show("anon save_open_play_queue", await pub.rpc("save_open_play_queue", { p_session_id: "00000000-0000-0000-0000-000000000000", p_minutes: 15, p_players: ["a", "b", "c", "d"], p_rounds: [{}] }));
+show("anon get_open_play_queue_public", await pub.rpc("get_open_play_queue_public", { p_code: "X" }));
+show("staff save_open_play_queue (not found → passes role)", await staff.rpc("save_open_play_queue", { p_session_id: "00000000-0000-0000-0000-000000000000", p_minutes: 15, p_players: ["a", "b", "c", "d"], p_rounds: [{}] }));
 show("staff mark refunded (not found → passes role)", await staff.rpc("staff_mark_open_play_refunded", { p_payment_id: "00000000-0000-0000-0000-000000000000" }));
