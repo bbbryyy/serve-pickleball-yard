@@ -18,7 +18,7 @@ import {
 } from "../schedule";
 import type { SiteSettings } from "../settings";
 import { createServiceClient } from "../supabase/server";
-import { findOpenPlay, findOptions, type BlockOption, type CourtGrid } from "./findOptions";
+import { findOpenPlay, findOptions, type BlockOption, type CourtGrid, type OpenPlayBlock } from "./findOptions";
 import { checkDateRange, CheckBookingInput, FindOpenPlayInput, FindOptionsInput, GetInfoInput, ProposeInput } from "./schemas";
 
 /** A booking proposal shown to the player as an option card with a "Book these hours" button. */
@@ -218,11 +218,24 @@ export function playerToolDefs(ctx: RunContext): ToolDef[] {
       // drop sessions that already ended; flag the one running now
       const sessions = findOpenPlay(grids, dates, serviceHours(rules)).filter((s) => slotStartFor(s.date, s.endHour) > ctx.now);
       const runningNow = (s: { date: string; startHour: number }) => slotStartFor(s.date, s.startHour) <= ctx.now;
+      const show = (s: OpenPlayBlock) => ({ date: s.date, day: formatServiceDate(s.date), hours: hoursLabel(s.startHour, s.endHour), courts: s.courts, running_now: runningNow(s) || undefined });
+      // nothing in the asked dates: look up to 14 more days so Dink can mention the next session
+      let next: OpenPlayBlock | undefined;
+      if (!sessions.length && input.date_to < lastDay) {
+        const later: string[] = [];
+        for (let d = addDays(input.date_to, 1); d <= lastDay && later.length < 14; d = addDays(d, 1)) later.push(d);
+        next = findOpenPlay(await loadGrids(ctx.settings, later), later, serviceHours(rules))[0];
+      }
       return json({
-        sessions: sessions.map((s) => ({ date: s.date, day: formatServiceDate(s.date), hours: hoursLabel(s.startHour, s.endHour), courts: s.courts, running_now: runningNow(s) || undefined })),
+        sessions: sessions.map(show),
+        next_session_after_these_dates: next ? show(next) : undefined,
         fee: `${formatPeso(openPlay.fee)} per player`,
         how_to_join: `Register on Reclub (${RECLUB_URL}), then pay through the session's payment link; walk-ins welcome when spots are left`,
-        note: sessions.length ? undefined : "No open play scheduled in these dates yet. Suggest checking Reclub or booking a court.",
+        note: sessions.length
+          ? undefined
+          : next
+            ? "None in these dates. Tell the player about the next session after them."
+            : "No open play scheduled in these dates yet. Suggest checking Reclub or booking a court.",
       });
     },
   });
