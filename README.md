@@ -37,6 +37,7 @@ Dink is not a general chatbot. It answers only from tools that read the yard's l
 |---|---|
 | `find_options` | Searches live availability for free blocks of the length asked (for example 2 hours, Saturday after 6PM), across both courts, with the 4AM–1AM service day and off-hours notice rules. Offers the nearest alternatives when nothing fits. |
 | `propose_booking` | Re-checks one option and shows a card with a **Book these hours** button. The booking page opens with those hours picked; the player still fills in the form and pays. Dink never books, holds or discounts anything. |
+| `find_open_play` | Scheduled open play sessions in a date range (day, time, courts), hiding ones that already ended, with the fee and how to join. |
 | `check_booking` | Status of a booking or open play payment by its SPY- reference, without personal details. |
 | `get_info` | Hours, rates, how to pay, open play and contact, read from Settings. |
 

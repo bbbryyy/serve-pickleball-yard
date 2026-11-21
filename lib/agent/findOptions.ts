@@ -95,3 +95,30 @@ export function findOptions(grids: CourtGrid[], input: FindInput): { options: Bl
   }
   return { options: [], alternatives };
 }
+
+export type OpenPlayBlock = { date: string; startHour: number; endHour: number; courts: string[] };
+
+/** Open play sessions from the grid: runs of consecutive open play hours per date, with the courts they use. */
+export function findOpenPlay(grids: CourtGrid[], dates: string[], hours: number[]): OpenPlayBlock[] {
+  const out: OpenPlayBlock[] = [];
+  for (const date of dates) {
+    // which courts are in open play at each hour
+    const at = hours.map((h) => grids.filter((g) => g.cells[`${date}|${h}`]?.state === "open_play").map((g) => g.courtName));
+    let i = 0;
+    while (i < hours.length) {
+      if (!at[i].length) {
+        i++;
+        continue;
+      }
+      const start = i;
+      const courts = new Set(at[i]);
+      while (i + 1 < hours.length && at[i + 1].length && hours[i + 1] === hours[i] + 1) {
+        i++;
+        at[i].forEach((c) => courts.add(c));
+      }
+      out.push({ date, startHour: hours[start], endHour: hours[i] + 1, courts: [...courts].sort() });
+      i++;
+    }
+  }
+  return out;
+}

@@ -26,6 +26,9 @@ function ipHash(request: Request) {
   return createHash("sha256").update(`${process.env.AGENT_IP_SALT ?? "serve"}:${ip}`).digest("hex").slice(0, 32);
 }
 
+/** The chat shows plain text: drop markdown bold and heading marks the model sometimes adds. */
+const plainText = (t: string) => t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#{1,6}\s+/gm, "").trim();
+
 export async function POST(request: Request) {
   const provider = chooseProvider();
   if (process.env.AGENT_ENABLED === "false" || !provider) return reply(503, { reply: LIMIT_TEXT.off });
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
     outputTokens = result.outputTokens;
     const refused = result.refused;
     let text = refused ? "I can only help with courts, booking and the yard." : result.text;
+    text = plainText(text);
     if (!text) text = ctx.cards.length ? "Here are open courts you can book:" : LIMIT_TEXT.error;
 
     const outcome = refused ? "declined" : ctx.cards.length ? "proposed" : ctx.sawNoOptions ? "no_options" : "answered";

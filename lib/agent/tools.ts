@@ -14,11 +14,12 @@ import {
   groupSlots,
   lastBookableDate,
   serviceHours,
+  slotStartFor,
 } from "../schedule";
 import type { SiteSettings } from "../settings";
 import { createServiceClient } from "../supabase/server";
-import { findOptions, type BlockOption, type CourtGrid } from "./findOptions";
-import { checkDateRange, CheckBookingInput, FindOptionsInput, GetInfoInput, ProposeInput } from "./schemas";
+import { findOpenPlay, findOptions, type BlockOption, type CourtGrid } from "./findOptions";
+import { checkDateRange, CheckBookingInput, FindOpenPlayInput, FindOptionsInput, GetInfoInput, ProposeInput } from "./schemas";
 
 /** A booking proposal shown to the player as an option card with a "Book these hours" button. */
 export type ProposalCard = {
@@ -202,6 +203,30 @@ export function playerToolDefs(ctx: RunContext): ToolDef[] {
     },
   });
 
+  const findOpenPlayTool = defineTool({
+    name: "find_open_play",
+    description:
+      "List scheduled open play sessions in a date range (max 14 days): date, time and courts. Use whenever the player asks about open play days or times.",
+    schema: FindOpenPlayInput,
+    run: async (input) => {
+      used("find_open_play");
+      const issue = checkDateRange(input.date_from, input.date_to, today, lastDay);
+      if (issue) return json({ error: issue === "too_long" ? "Search at most 14 days at a time." : `Search dates from ${today} to ${lastDay}.` });
+      const dates: string[] = [];
+      for (let d = input.date_from; d <= input.date_to; d = addDays(d, 1)) dates.push(d);
+      const grids = await loadGrids(ctx.settings, dates);
+      // drop sessions that already ended; flag the one running now
+      const sessions = findOpenPlay(grids, dates, serviceHours(rules)).filter((s) => slotStartFor(s.date, s.endHour) > ctx.now);
+      const runningNow = (s: { date: string; startHour: number }) => slotStartFor(s.date, s.startHour) <= ctx.now;
+      return json({
+        sessions: sessions.map((s) => ({ date: s.date, day: formatServiceDate(s.date), hours: hoursLabel(s.startHour, s.endHour), courts: s.courts, running_now: runningNow(s) || undefined })),
+        fee: `${formatPeso(openPlay.fee)} per player`,
+        how_to_join: `Register on Reclub (${RECLUB_URL}), then pay through the session's payment link; walk-ins welcome when spots are left`,
+        note: sessions.length ? undefined : "No open play scheduled in these dates yet. Suggest checking Reclub or booking a court.",
+      });
+    },
+  });
+
   const checkBooking = defineTool({
     name: "check_booking",
     description: "Look up a booking or open play payment by its reference (SPY-XXXXXX or SPY-OP-XXXX). Returns status only, no personal details.",
@@ -237,5 +262,5 @@ export function playerToolDefs(ctx: RunContext): ToolDef[] {
     },
   });
 
-  return [getInfo, findOptionsTool, propose, checkBooking];
+  return [getInfo, findOptionsTool, propose, findOpenPlayTool, checkBooking];
 }

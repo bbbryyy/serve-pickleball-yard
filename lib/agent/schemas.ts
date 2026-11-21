@@ -31,6 +31,11 @@ export const GetInfoInput = z.object({
   topic: z.enum(["hours_and_rates", "how_to_book_and_pay", "open_play", "location_and_contact", "all"]).default("all"),
 });
 
+export const FindOpenPlayInput = z.object({
+  date_from: isoDate.describe("First service date to search, YYYY-MM-DD"),
+  date_to: isoDate.describe("Last service date to search, YYYY-MM-DD (at most 14 days after date_from)"),
+});
+
 export type DateRangeIssue = "past" | "reversed" | "too_long" | "too_far";
 
 /** Checks a search range against today and the last bookable date (all YYYY-MM-DD). */

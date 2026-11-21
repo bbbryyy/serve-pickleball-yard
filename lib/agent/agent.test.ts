@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RULES as R, slotStartFor } from "../schedule";
-import { findOptions, type CourtGrid } from "./findOptions";
+import { findOpenPlay, findOptions, type CourtGrid } from "./findOptions";
 import { checkConversation, isRateLimited, LIMITS } from "./limits";
 import { buildSystemPrompt } from "./prompt";
 import { checkDateRange, CheckBookingInput, FindOptionsInput, ProposeInput } from "./schemas";
@@ -64,6 +64,25 @@ describe("findOptions", () => {
     expect(r.alternatives.length).toBeLessThanOrEqual(3);
     // closest to 6PM first: 4PM–6PM or 10PM–12AM
     expect([16, 22]).toContain(r.alternatives[0].startHour);
+  });
+});
+
+describe("findOpenPlay", () => {
+  it("groups consecutive open play hours into sessions with their courts", () => {
+    const d = "2026-11-28";
+    const g1 = grid(1, [d, "2026-11-29"]);
+    const g2 = grid(2, [d, "2026-11-29"]);
+    for (const h of [18, 19, 20, 21]) g1.cells[`${d}|${h}`].state = "open_play";
+    for (const h of [18, 19]) g2.cells[`${d}|${h}`].state = "open_play";
+    g1.cells[`${d}|8`].state = "open_play";
+    const r = findOpenPlay([g1, g2], [d, "2026-11-29"], HOURS);
+    expect(r).toEqual([
+      { date: d, startHour: 8, endHour: 9, courts: ["Court 1"] },
+      { date: d, startHour: 18, endHour: 22, courts: ["Court 1", "Court 2"] },
+    ]);
+  });
+  it("returns nothing when no open play is scheduled", () => {
+    expect(findOpenPlay([grid(1, ["2026-11-28"])], ["2026-11-28"], HOURS)).toEqual([]);
   });
 });
 

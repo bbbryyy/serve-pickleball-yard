@@ -232,6 +232,18 @@ type ProposeBookingOutput =
   | { ok: true; proposal: ProposalCard }
   | { ok: false; reason: "taken" | "closed" | "lead_time" | "too_far" | "past" | "unknown_court" };
 
+// find_open_play: open play sessions from the same availability grid (cells marked open play)
+interface FindOpenPlayInput {
+  date_from: string;                // YYYY-MM-DD service date, today or later
+  date_to: string;                  // YYYY-MM-DD, at most 14 days after date_from
+}
+interface FindOpenPlayOutput {
+  sessions: { date: string; day: string; hours: string; courts: string[]; running_now?: true }[];
+  fee: string;                      // from Settings
+  how_to_join: string;
+  note?: string;                    // when nothing is scheduled
+}
+
 // check_booking: wraps get_booking_public and strips personal data
 interface CheckBookingInput {
   ref: string;                      // SPY-XXXXXX or SPY-OP-XXXX
@@ -556,4 +568,5 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 | 2026-11-21 | Claude Code | `docs/architecture.md` referenced but missing | Created with UI, backend, AI layer, data, and a Dink data-flow diagram |
 | 2026-11-21 | Claude Code | Spec named the Vercel AI SDK; the implementation uses the Anthropic TypeScript SDK | Constraints updated to `@anthropic-ai/sdk` |
 | 2026-11-21 | Claude Code (testing) | The course's OpenAI gateway timed out from the developer's network, so one provider was a single point of failure | Claude stays the default; an OpenAI-compatible backup was added behind `AGENT_PROVIDER`, with the same tools and limits |
+| 2026-11-21 | Owner (testing the preview) | Dink couldn't find the open play session set for next week | Added `find_open_play`, which reads sessions from the availability grid and hides ones that already ended; the prompt points open play questions to it |
 | | Owner | _(add the owner's feedback after reading)_ | |
