@@ -118,3 +118,21 @@ describe("system prompt", () => {
     expect(buildSystemPrompt({ now, rules: R, courts: [], openPlayFee: 120 })).toContain("service date is 2026-11-21");
   });
 });
+
+describe("OpenAI tool specs", () => {
+  it("turns each tool's Zod schema into an OpenAI function with a clean JSON schema", async () => {
+    const { openAiToolSpecs } = await import("./openaiTools");
+    const { GetInfoInput } = await import("./schemas");
+    const specs = openAiToolSpecs([
+      { name: "find_options", description: "Find courts", schema: FindOptionsInput },
+      { name: "get_info", description: "Yard info", schema: GetInfoInput },
+    ]);
+    expect(specs.map((s) => s.function.name)).toEqual(["find_options", "get_info"]);
+    const p = specs[0].function.parameters as { type: string; required: string[]; properties: Record<string, unknown> };
+    expect(p.type).toBe("object");
+    expect(p.required).toEqual(["date_from", "date_to", "duration_hours"]);
+    expect("$schema" in p).toBe(false);
+    // a field with a default is optional for the model
+    expect((specs[1].function.parameters as { required?: string[] }).required ?? []).not.toContain("topic");
+  });
+});

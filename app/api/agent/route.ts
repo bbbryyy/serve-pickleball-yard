@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto";
-import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { checkConversation, isRateLimited, LIMIT_TEXT, LIMITS, type ChatMessage } from "@/lib/agent/limits";
 import { buildSystemPrompt } from "@/lib/agent/prompt";
-import { playerTools, type RunContext } from "@/lib/agent/tools";
+import { chooseProvider, errorKind, runAnthropic, runOpenAI } from "@/lib/agent/runners";
+import { playerToolDefs, type RunContext } from "@/lib/agent/tools";
 import { getSiteSettings } from "@/lib/settings";
 import { createServiceClient } from "@/lib/supabase/server";
 
 // Dink, player mode: a public, read-only booking assistant.
 // The mode is always "player" here; staff/admin modes are v2 and will decide the mode from the session.
+// Provider: OpenAI-compatible (e.g. Vocareum gpt-4o-mini) or Claude, chosen by AGENT_PROVIDER / which key is set.
 
 export const maxDuration = 30;
 
@@ -26,7 +27,8 @@ function ipHash(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.AGENT_ENABLED === "false" || !process.env.ANTHROPIC_API_KEY) return reply(503, { reply: LIMIT_TEXT.off });
+  const provider = chooseProvider();
+  if (process.env.AGENT_ENABLED === "false" || !provider) return reply(503, { reply: LIMIT_TEXT.off });
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return reply(400, { reply: LIMIT_TEXT.bad_shape });
@@ -63,33 +65,19 @@ export async function POST(request: Request) {
   let outputTokens = 0;
 
   try {
-    const client = new Anthropic();
-    const runner = client.beta.messages.toolRunner({
-      model: process.env.AGENT_MODEL || "claude-haiku-5-5",
-      max_tokens: LIMITS.maxTokens,
-      max_iterations: LIMITS.maxIterations,
-      output_config: { effort: "low" },
+    const runModel = provider === "openai" ? runOpenAI : runAnthropic;
+    const result = await runModel({
       system: buildSystemPrompt({ now, rules: settings.rules, courts: settings.courts, openPlayFee: settings.openPlay.fee }),
-      tools: playerTools(ctx),
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages,
+      tools: playerToolDefs(ctx),
+      maxIterations: LIMITS.maxIterations,
+      maxTokens: LIMITS.maxTokens,
     });
-
-    let last: Anthropic.Beta.BetaMessage | null = null;
-    for await (const message of runner) {
-      steps++;
-      inputTokens += message.usage.input_tokens;
-      outputTokens += message.usage.output_tokens;
-      last = message;
-    }
-
-    const refused = last?.stop_reason === "refusal";
-    let text = refused
-      ? "I can only help with courts, booking and the yard."
-      : (last?.content ?? [])
-          .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-          .map((b) => b.text)
-          .join("\n")
-          .trim();
+    steps = result.steps;
+    inputTokens = result.inputTokens;
+    outputTokens = result.outputTokens;
+    const refused = result.refused;
+    let text = refused ? "I can only help with courts, booking and the yard." : result.text;
     if (!text) text = ctx.cards.length ? "Here are open courts you can book:" : LIMIT_TEXT.error;
 
     const outcome = refused ? "declined" : ctx.cards.length ? "proposed" : ctx.sawNoOptions ? "no_options" : "answered";
@@ -99,14 +87,7 @@ export async function POST(request: Request) {
       .eq("id", run.id);
     return reply(200, { reply: text, cards: ctx.cards });
   } catch (err) {
-    const kind =
-      err instanceof Anthropic.RateLimitError
-        ? "provider_rate_limit"
-        : err instanceof Anthropic.APIConnectionError
-          ? "provider_connection"
-          : err instanceof Anthropic.APIError
-            ? `provider_${err.status ?? "error"}`
-            : "server";
+    const kind = errorKind(err);
     await db
       .from("agent_runs")
       .update({ steps, tools: [...ctx.toolsUsed], input_tokens: inputTokens, output_tokens: outputTokens, latency_ms: Date.now() - started, outcome: "error", error: kind })

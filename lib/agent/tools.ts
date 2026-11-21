@@ -1,5 +1,5 @@
 import "server-only";
-import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import type { z } from "zod";
 import { getWeek } from "../availability";
 import { getPublicBooking, STATUS_TEXT } from "../booking";
 import { CONTACT, DIRECTIONS_URL, RECLUB_URL } from "../contact";
@@ -65,18 +65,23 @@ const describe = (o: BlockOption) => ({
   total: formatPeso(o.total),
 });
 
+/** A tool both providers can run: a Zod input schema and a function returning JSON text for the model. */
+export type ToolDef = { name: string; description: string; schema: z.ZodType; run: (input: never) => Promise<string> };
+const defineTool = <S extends z.ZodType>(t: { name: string; description: string; schema: S; run: (input: z.infer<S>) => Promise<string> }) =>
+  t as unknown as ToolDef;
+
 /** Player-mode tools: read-only, plus proposals that only become bookings when the player fills in the form. */
-export function playerTools(ctx: RunContext) {
+export function playerToolDefs(ctx: RunContext): ToolDef[] {
   const { rules, courts, gcash, maya, openPlay } = ctx.settings;
   const today = currentServiceDate(ctx.now, rules);
   const lastDay = lastBookableDate(ctx.now, rules);
   const used = (name: string) => ctx.toolsUsed.add(name);
 
-  const getInfo = betaZodTool({
+  const getInfo = defineTool({
     name: "get_info",
     description:
       "Policies and facts about Serve Pickleball Yard: hours, rates, booking rules, how to pay, open play, location and contact. Use for any question about how the yard works.",
-    inputSchema: GetInfoInput,
+    schema: GetInfoInput,
     run: async ({ topic }) => {
       used("get_info");
       const close = 24 + rules.closeHour;
@@ -121,11 +126,11 @@ export function playerTools(ctx: RunContext) {
     },
   });
 
-  const findOptionsTool = betaZodTool({
+  const findOptionsTool = defineTool({
     name: "find_options",
     description:
       "Find open courts for a duration within a date range (max 14 days) and an optional time window, using live availability. Returns up to 5 options, or nearest alternatives when nothing fits.",
-    inputSchema: FindOptionsInput,
+    schema: FindOptionsInput,
     run: async (input) => {
       used("find_options");
       const issue = checkDateRange(input.date_from, input.date_to, today, lastDay);
@@ -159,11 +164,11 @@ export function playerTools(ctx: RunContext) {
     },
   });
 
-  const propose = betaZodTool({
+  const propose = defineTool({
     name: "propose_booking",
     description:
       "Re-check one option from find_options against live availability and show the player a 'Book these hours' button for it. Call for each of the best 1–3 options. It does not book or hold anything.",
-    inputSchema: ProposeInput,
+    schema: ProposeInput,
     run: async ({ court_id, date, start_hour, duration_hours }) => {
       used("propose_booking");
       const court = courts.find((c) => c.id === court_id);
@@ -197,10 +202,10 @@ export function playerTools(ctx: RunContext) {
     },
   });
 
-  const checkBooking = betaZodTool({
+  const checkBooking = defineTool({
     name: "check_booking",
     description: "Look up a booking or open play payment by its reference (SPY-XXXXXX or SPY-OP-XXXX). Returns status only, no personal details.",
-    inputSchema: CheckBookingInput,
+    schema: CheckBookingInput,
     run: async ({ ref }) => {
       used("check_booking");
       const r = ref.trim().toUpperCase();
