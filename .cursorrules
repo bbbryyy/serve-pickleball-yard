@@ -1,0 +1,16 @@
+# Serve Pickleball Yard: rules for AI assistants (full version in CLAUDE.md)
+
+Stack: Next.js 16 App Router, React 19, TypeScript, Tailwind 4, Supabase (Postgres + RLS, Auth,
+Storage), Zod 4, Vitest. Dink AI: @anthropic-ai/sdk, model from AGENT_MODEL (claude-haiku-5-5).
+
+- Next.js 16 differs from older versions: read node_modules/next/dist/docs/ before writing code.
+- Writes only through server actions and security-definer RPCs. Public pages never touch tables.
+  Staff code uses the user's session; RPCs re-check is_staff()/is_admin(). New tables: RLS on, no anon.
+- All times are Asia/Manila. Service day is 4AM–1AM; 12AM–1AM belongs to the day before. Use lib/schedule.ts.
+- Rates, hours, holds and lead times come from Settings, never hard-coded.
+- Secrets only in env vars, server-side. Never commit keys or expose the service role key.
+- Show mockups before redesigning any screen; wait for the owner's go-ahead.
+- Dink: answers only from tool results; player tools are read-only; no personal data to the model;
+  never store chat text.
+- Before finishing: npm run lint, npx tsc --noEmit, npm test.
+- Plain sentence-case English. No hype.
