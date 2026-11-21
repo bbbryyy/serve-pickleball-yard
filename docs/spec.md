@@ -402,7 +402,9 @@ table (`id`, `run_id`, `user_id`, `kind`, `payload jsonb`, `status` drafted / co
   Tailwind CSS 4, Zod 4, Vitest. Hosted on Vercel; Supabase in Tokyo.
 - **AI:** Claude through the Anthropic TypeScript SDK (`@anthropic-ai/sdk`) with a server-side tool
   loop. Model set by `AGENT_MODEL` (default `claude-haiku-5-5` for speed and cost). Read the
-  installed SDK docs in `node_modules/@anthropic-ai/sdk/` before changing the loop.
+  installed SDK docs in `node_modules/@anthropic-ai/sdk/` before changing the loop. Backup: an
+  OpenAI-compatible endpoint (`AGENT_PROVIDER=openai`, default `gpt-4o-mini`) with the same tools,
+  input validation and limits, so the owner can switch providers without a code change.
 - **Next.js 16:** APIs differ from older versions; read `node_modules/next/dist/docs/` before
   writing code (`AGENTS.md`).
 - **Time:** Philippine time (`Asia/Manila`). A service day runs 4AM–1AM; the 12AM–1AM slot belongs
@@ -411,8 +413,8 @@ table (`id`, `run_id`, `user_id`, `kind`, `payload jsonb`, `status` drafted / co
   time, weeks ahead, open play fee.
 - **Writes only through server actions and security-definer RPCs.** Public pages call RPCs through
   the server; staff use their own session and every RPC re-checks the role.
-- **Secrets** only in environment variables, server-side: the Supabase three, `ANTHROPIC_API_KEY`,
-  `AGENT_MODEL`, `AGENT_ENABLED`, `AGENT_IP_SALT`, `AGENT_DAILY_LIMIT`.
+- **Secrets** only in environment variables, server-side: the Supabase three, `AGENT_PROVIDER`, `ANTHROPIC_API_KEY`
+  (or `OPENAI_API_KEY` and `OPENAI_BASE_URL`), `AGENT_MODEL`, `AGENT_ENABLED`, `AGENT_IP_SALT`, `AGENT_DAILY_LIMIT`.
 - **Data:** migration `supabase/migrations/20261121000001_agent.sql`, RLS on both tables, no anon
   access, admin `select` for reports, writes only from the server.
 - **Cost:** a typical conversation stays under ₱1 at the default model; limits above cap the worst
@@ -553,4 +555,5 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 | 2026-11-21 | Claude Code | Rate limit had no storage on Vercel serverless | Rate limit and daily cap count `agent_runs` by `ip_hash` in Postgres |
 | 2026-11-21 | Claude Code | `docs/architecture.md` referenced but missing | Created with UI, backend, AI layer, data, and a Dink data-flow diagram |
 | 2026-11-21 | Claude Code | Spec named the Vercel AI SDK; the implementation uses the Anthropic TypeScript SDK | Constraints updated to `@anthropic-ai/sdk` |
+| 2026-11-21 | Claude Code (testing) | The course's OpenAI gateway timed out from the developer's network, so one provider was a single point of failure | Claude stays the default; an OpenAI-compatible backup was added behind `AGENT_PROVIDER`, with the same tools and limits |
 | | Owner | _(add the owner's feedback after reading)_ | |

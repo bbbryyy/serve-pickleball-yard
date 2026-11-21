@@ -16,7 +16,8 @@ Docs: `docs/spec.md` (Dink spec), `docs/architecture.md`, `docs/PRD.md`, `docs/p
 - Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Recharts
 - Supabase: Postgres with row-level security, Auth, Storage, pg_cron (`supabase/migrations/`)
 - Zod 4 for validation, Vitest for tests, date-fns-tz for Manila time
-- Dink: `@anthropic-ai/sdk`, model from `AGENT_MODEL` (default `claude-haiku-5-5`), code in
+- Dink: `@anthropic-ai/sdk` (default, `claude-haiku-5-5`) or an OpenAI-compatible backup via
+  `AGENT_PROVIDER=openai` (`openai` SDK, `gpt-4o-mini`); model from `AGENT_MODEL`; code in
   `lib/agent/` and `app/api/agent/route.ts`
 - Hosting: Vercel; CI in `.github/workflows/ci.yml`
 

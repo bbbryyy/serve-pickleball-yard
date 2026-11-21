@@ -17,13 +17,13 @@ export type RunResult = { text: string; steps: number; inputTokens: number; outp
 
 export type Provider = "openai" | "anthropic";
 
-/** Which provider to use: AGENT_PROVIDER, or whichever key is set (OpenAI first). */
+/** Which provider to use: AGENT_PROVIDER, or whichever key is set (Claude first). */
 export function chooseProvider(): Provider | null {
   const wanted = process.env.AGENT_PROVIDER;
   if (wanted === "openai") return process.env.OPENAI_API_KEY ? "openai" : null;
   if (wanted === "anthropic") return process.env.ANTHROPIC_API_KEY ? "anthropic" : null;
-  if (process.env.OPENAI_API_KEY) return "openai";
   if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (process.env.OPENAI_API_KEY) return "openai";
   return null;
 }
 

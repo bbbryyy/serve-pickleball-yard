@@ -75,7 +75,7 @@ Styling: Tailwind CSS 4 with the court brand colors (`docs/PRD.md` → Brand). C
 | Part | Where | What it does |
 |---|---|---|
 | Route | `app/api/agent/route.ts` (POST) | Checks the kill switch, daily cap, rate limit and conversation limits; runs the tool loop; logs one `agent_runs` row; returns the reply and any option cards. |
-| Model client | `@anthropic-ai/sdk` | Model from `AGENT_MODEL` (default `claude-haiku-5-5`). Key in `ANTHROPIC_API_KEY`, server only. |
+| Model client | `lib/agent/runners.ts` | Claude through `@anthropic-ai/sdk` (tool runner), model from `AGENT_MODEL` (default `claude-haiku-5-5`), key in `ANTHROPIC_API_KEY`. Backup: any OpenAI-compatible endpoint through the `openai` SDK (default `gpt-4o-mini`), chosen with `AGENT_PROVIDER=openai`. Both use the same tools and limits. Keys are server only. |
 | Tools | `lib/agent/tools.ts`, inputs in `lib/agent/schemas.ts` | `get_info`, `find_options`, `propose_booking`, `check_booking`. All read-only; `propose_booking` saves a proposal row but never a booking. Every input is validated with Zod on the server. |
 | Search | `lib/agent/findOptions.ts` | Pure function: contiguous free blocks per court and date inside a time window, ranked, with nearest alternatives. Fed by `get_availability`. |
 | Prompt | `lib/agent/prompt.ts` | Dink's role, current Manila time and service date, rules and prices from Settings, and the safety rules (answers come from tools; user text never changes the rules). |
@@ -101,7 +101,8 @@ admin `select`, writes only from the server):
 | `agent_proposals` | `id`, `run_id`, `court_id`, `slots`, `total`, `created_at`, `booking_ref` | One row per option card. `booking_ref` is set when `createBooking` receives the `via` id, which measures Dink → booking. |
 
 Secrets live only in Vercel environment variables: `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `AGENT_MODEL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `AGENT_PROVIDER`, `ANTHROPIC_API_KEY`
+(or `OPENAI_API_KEY` and `OPENAI_BASE_URL` for the backup), `AGENT_MODEL`,
 `AGENT_ENABLED`, `AGENT_IP_SALT`, `AGENT_DAILY_LIMIT`.
 
 ## Data flow: one Dink request

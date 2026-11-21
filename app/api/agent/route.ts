@@ -9,7 +9,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 // Dink, player mode: a public, read-only booking assistant.
 // The mode is always "player" here; staff/admin modes are v2 and will decide the mode from the session.
-// Provider: OpenAI-compatible (e.g. Vocareum gpt-4o-mini) or Claude, chosen by AGENT_PROVIDER / which key is set.
+// Provider: Claude by default; an OpenAI-compatible endpoint (e.g. gpt-4o-mini) is a switchable backup (AGENT_PROVIDER).
 
 export const maxDuration = 30;
 
