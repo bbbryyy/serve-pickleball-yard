@@ -12,14 +12,22 @@ export function BookingPanel({
   week,
   rules,
   today,
+  initialSelection = [],
+  via,
+  suggestionTaken = false,
 }: {
   court: { id: number; name: string };
   week: WeekData;
   rules: BookingRules;
   today: string;
+  /** hours preselected from a Dink suggestion */
+  initialSelection?: [string, string][];
+  /** the Dink proposal these hours came from */
+  via?: string;
+  suggestionTaken?: boolean;
 }) {
   // key -> iso; kept across week navigation so players can book on several days
-  const [selected, setSelected] = useState<Map<string, string>>(new Map());
+  const [selected, setSelected] = useState<Map<string, string>>(() => new Map(initialSelection));
   const [state, action, pending] = useActionState<BookState, FormData>(createBooking, {});
   const router = useRouter();
   // a slot may have been taken meanwhile: reload availability after any error
@@ -86,6 +94,12 @@ export function BookingPanel({
 
       <form id="booking-form" action={action} className="card h-fit scroll-mt-24 space-y-3 p-5 lg:sticky lg:top-24">
         <h2 className="font-display text-xl font-semibold text-steel uppercase">Your booking</h2>
+        {via && !suggestionTaken && <p className="rounded-md bg-ball/30 px-3 py-2 text-sm text-ball-dark">Dink picked these hours for you. Add your details to reserve them.</p>}
+        {suggestionTaken && (
+          <p role="status" className="rounded-md bg-surround/15 px-3 py-2 text-sm text-surround-dark">
+            Some of the hours Dink suggested were just taken. Pick other hours below, or ask Dink again.
+          </p>
+        )}
         <p className="text-sm font-semibold text-court">{court.name}</p>
         {summary.length ? (
           <ul className="space-y-1 text-sm text-steel">
@@ -109,6 +123,7 @@ export function BookingPanel({
         )}
 
         <input type="hidden" name="courtId" value={court.id} />
+        {via && <input type="hidden" name="via" value={via} />}
         <input type="hidden" name="slots" value={JSON.stringify(isos)} />
         <div>
           <label className="label" htmlFor="name">Full name</label>
