@@ -4,6 +4,7 @@ import { capacityHours, getReport, rangePresets, resolveRange, sum } from "@/lib
 import { addDays, formatHour, formatPeso, formatServiceDate, mondayOf, monthShort, serviceHours } from "@/lib/schedule";
 import { formatSessionTime } from "@/lib/openPlay";
 import { getSiteSettings } from "@/lib/settings";
+import { createUserClient } from "@/lib/supabase/server";
 import { BarSeries } from "./Charts";
 
 const nowMs = () => Date.now();
@@ -16,6 +17,28 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
   const { rules, courts } = await getSiteSettings();
   const range = resolveRange(sp, rules, "12m");
   const { daily, heat, open_play_sessions: opSessions } = await getReport(range.from, range.to);
+
+  // Dink (AI assistant) in the last 30 days — admin-only via RLS; no message text is stored
+  const since = new Date(nowMs() - 30 * 86400e3).toISOString();
+  const supabase = await createUserClient();
+  const [{ data: runs }, { data: proposals }] = await Promise.all([
+    supabase.from("agent_runs").select("outcome, input_tokens, output_tokens, latency_ms").gte("created_at", since),
+    supabase.from("agent_proposals").select("booking_ref").gte("created_at", since),
+  ]);
+  const dinkRuns = runs ?? [];
+  const dink = {
+    chats: dinkRuns.filter((r) => r.outcome !== "limited").length,
+    proposed: dinkRuns.filter((r) => r.outcome === "proposed").length,
+    booked: (proposals ?? []).filter((p) => p.booking_ref).length,
+    offered: (proposals ?? []).length,
+    errors: dinkRuns.filter((r) => r.outcome === "error").length,
+    limited: dinkRuns.filter((r) => r.outcome === "limited").length,
+    tokens: sum(dinkRuns, (r) => r.input_tokens + r.output_tokens),
+    medianMs: (() => {
+      const l = dinkRuns.map((r) => r.latency_ms).filter((x): x is number => x !== null).sort((a, b) => a - b);
+      return l.length ? l[Math.floor(l.length / 2)] : null;
+    })(),
+  };
 
   const hours = sum(daily, (r) => r.hours);
   const capacity = capacityHours(range.from, range.to, rules, courts.length);
@@ -167,6 +190,17 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
             </table>
           </div>
         )}
+      </div>
+
+      <div className="card p-4">
+        <h2 className="text-sm font-bold text-steel uppercase">Dink (AI assistant)</h2>
+        <p className="mb-3 text-xs text-steel/60">Last 30 days. Counts only; what players type is never stored.</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Metric label="Chats" value={dink.chats.toLocaleString()} sub={`${dink.proposed} showed court options`} />
+          <Metric label="Booked from Dink" value={dink.booked.toLocaleString()} sub={`of ${dink.offered} options shown`} />
+          <Metric label="Errors" value={dink.errors.toLocaleString()} sub={`${dink.limited} rate-limited`} />
+          <Metric label="Tokens used" value={dink.tokens.toLocaleString()} sub={dink.medianMs !== null ? `median reply ${(dink.medianMs / 1000).toFixed(1)}s` : undefined} />
+        </div>
       </div>
 
       <div className="card p-4">
