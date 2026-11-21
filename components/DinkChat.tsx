@@ -20,6 +20,8 @@ export type DinkMode = {
   placeholder: string;
   thinking: string;
   note: string;
+  /** "pane": full-height panel on the right (backoffice); default: floating bubble panel */
+  layout?: "floating" | "pane";
 };
 
 export const PLAYER_MODE: DinkMode = {
@@ -83,7 +85,11 @@ export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void;
       role="dialog"
       aria-modal="false"
       aria-labelledby="dink-chat-title"
-      className="fixed inset-0 z-50 flex flex-col bg-paper sm:inset-auto sm:right-5 sm:bottom-5 sm:h-[min(620px,calc(100dvh-2.5rem))] sm:w-[380px] sm:overflow-hidden sm:rounded-3xl sm:border sm:border-kitchen-light sm:shadow-2xl"
+      className={`fixed inset-0 z-50 flex flex-col bg-paper text-steel ${
+        mode.layout === "pane"
+          ? "sm:left-auto sm:w-[min(600px,100vw)] sm:border-l sm:border-kitchen-light sm:shadow-2xl"
+          : "sm:inset-auto sm:right-5 sm:bottom-5 sm:h-[min(620px,calc(100dvh-2.5rem))] sm:w-[380px] sm:overflow-hidden sm:rounded-3xl sm:border sm:border-kitchen-light sm:shadow-2xl"
+      }`}
     >
       <header className="flex items-center gap-3 bg-court-deep px-4 py-3 text-white">
         <Dink state={pending ? "think" : "wave"} className="w-10 shrink-0" />
@@ -146,7 +152,7 @@ export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void;
 
       <div className="space-y-2 border-t border-kitchen-light bg-white px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {messages.length === 0 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <div className={`flex gap-1.5 pb-1 ${mode.layout === "pane" ? "flex-wrap" : "overflow-x-auto"}`}>
             {mode.chips.map((c) => (
               <button key={c} type="button" onClick={() => send(c)} className="shrink-0 rounded-full border border-kitchen bg-white px-3 py-1 text-xs font-semibold text-steel hover:border-court">
                 {c}

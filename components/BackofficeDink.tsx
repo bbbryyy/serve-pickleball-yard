@@ -28,6 +28,7 @@ export function BackofficeDink({ firstName, isAdmin }: { firstName: string; isAd
     placeholder: "Ask about today, payments, stock…",
     thinking: "Dink is checking…",
     note: "Dink uses an AI service. It sees first names only, never mobile numbers or emails.",
+    layout: "pane",
   };
 
   return (

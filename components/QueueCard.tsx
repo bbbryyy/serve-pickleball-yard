@@ -27,7 +27,7 @@ export function QueueCard({ draft }: { draft: QueueDraft }) {
         {draft.title} · {draft.players.length} players · {draft.minutesPerGame} min games
         {counts.length > 0 && ` · ${Math.min(...counts)}–${Math.max(...counts)} games each`}
       </p>
-      <div className="mt-2 max-h-64 overflow-auto rounded-lg border border-kitchen-light">
+      <div className="mt-2 max-h-[50vh] overflow-auto rounded-lg border border-kitchen-light">
         <QueueTable courts={draft.courts} rounds={draft.rounds} playedThrough={draft.playedThrough} compact markNow={false} />
       </div>
       {result?.ok ? (
