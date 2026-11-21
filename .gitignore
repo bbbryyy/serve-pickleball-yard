@@ -42,3 +42,6 @@ next-env.d.ts
 
 # the blank template is safe to share
 !.env.example
+
+# course PDFs (not for the public repo)
+docs/*.pdf
