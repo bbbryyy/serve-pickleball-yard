@@ -36,12 +36,12 @@ export function SellScreen({ items, sales, closed }: { items: PosItem[]; sales: 
   const completed = sales.filter((s) => s.status === "completed");
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-5 @2xl:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         {items.length === 0 ? (
           <p className="card p-6 text-sm text-steel/70">No items yet. An admin can add them in Inventory.</p>
         ) : (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 @4xl:grid-cols-5">
             {items.map((i) => {
               const out = i.kind === "shelf" && (i.on_hand ?? 0) - (cart[i.id] ?? 0) <= 0;
               const low = i.kind === "shelf" && isLow(i.on_hand ?? 0, i.low_stock_at);
@@ -76,7 +76,7 @@ export function SellScreen({ items, sales, closed }: { items: PosItem[]; sales: 
       </div>
 
       <div className="space-y-4">
-        <div className="card space-y-3 p-4 lg:sticky lg:top-8">
+        <div className="card space-y-3 p-4 @2xl:sticky @2xl:top-8">
           <h2 className="text-sm font-bold text-steel uppercase">Sale</h2>
           {lines.length === 0 ? (
             <p className="text-sm text-steel/60">Tap items to add them.</p>

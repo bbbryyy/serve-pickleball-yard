@@ -26,7 +26,7 @@ function Result({ r }: { r: ActionResult }) {
 export function InventoryManager({ items, selectedId, history }: { items: InvItem[]; selectedId: string | null; history: HistoryRow[] }) {
   const selected = items.find((i) => i.id === selectedId) ?? null;
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-5 @4xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="card overflow-x-auto p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-bold text-steel uppercase">Items</h2>

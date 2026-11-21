@@ -172,3 +172,13 @@ html {
   background: radial-gradient(circle at calc(100% - 8px) 50%, #c8e63c 0 3px, transparent 4px), #0f2f63;
   padding-right: 1rem;
 }
+
+/* backoffice Dink pane: on large screens the page makes room for it instead of being covered */
+:root {
+  --dink-pane-w: min(520px, 38vw);
+}
+@media (min-width: 1024px) {
+  html[data-dink-pane="open"] .bo-main {
+    margin-right: var(--dink-pane-w);
+  }
+}

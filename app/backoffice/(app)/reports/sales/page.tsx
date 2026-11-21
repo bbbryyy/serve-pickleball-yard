@@ -64,14 +64,14 @@ export default async function SalesPage({ searchParams }: PageProps<"/backoffice
           {refundsOwed} open play refund{refundsOwed === 1 ? "" : "s"} owed
         </Link>
       )}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 @2xl:grid-cols-4">
         <Metric label="Total" value={formatPeso(revenue)} sub={split.refunds ? `after ${formatPeso(split.refunds)} in refunds` : undefined} />
         <Metric label="Court rentals" value={formatPeso(split.rentals)} sub={`${split.rentalHours.toLocaleString()} hours · ${bookings.toLocaleString()} bookings`} />
         <Metric label="Open play" value={formatPeso(split.openPlay)} sub={`${split.players.toLocaleString()} players · ${sessionsHeld} session${sessionsHeld === 1 ? "" : "s"}`} />
         <Metric label="Store" value={formatPeso(split.store)} sub={`${formatPeso(Math.round(split.storeProfit))} profit`} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 @xl:grid-cols-3">
         {tables.map((t) => (
           <div key={t.title} className="card p-4">
             <h2 className="mb-2 text-sm font-bold text-steel uppercase">{t.title}</h2>

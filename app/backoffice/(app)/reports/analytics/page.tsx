@@ -96,7 +96,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
       </div>
       <RangePicker base="/backoffice/reports/analytics" presets={rangePresets(rules)} current={range} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 @xl:grid-cols-4">
         <Metric label="Utilization" value={`${capacity ? Math.round((hours / capacity) * 100) : 0}%`} sub={`${hours.toLocaleString()} of ${capacity.toLocaleString()} court-hours`} />
         <Metric label="Peak slot" value={peak ? `${DOW[peak.dow - 1]} ${formatHour(peak.sh)}` : "—"} sub={peak ? `${peak.hours} hours booked` : undefined} />
         <Metric label="Busiest day" value={busiestDay?.hours ? busiestDay.d : "—"} sub={busiestDay?.hours ? `${busiestDay.hours} hours booked` : undefined} />
@@ -141,7 +141,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 @2xl:grid-cols-2">
         <div className="card p-4">
           <h2 className="text-sm font-bold text-steel uppercase">Monthly hours booked</h2>
           <p className="mb-2 text-xs text-steel/60">Use this to spot busy and slow seasons. Best month in orange.</p>
@@ -157,7 +157,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
       <div className="card p-4">
         <h2 className="text-sm font-bold text-steel uppercase">Open play</h2>
         <p className="mb-3 text-xs text-steel/60">Sessions that have started in this range. Players counts approved payments and walk-ins.</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @xl:grid-cols-4">
           <Metric label="Sessions held" value={heldSessions.length.toLocaleString()} />
           <Metric label="Players" value={opPlayers.toLocaleString()} />
           <Metric label="Avg per session" value={heldSessions.length ? (opPlayers / heldSessions.length).toFixed(1) : "—"} />
@@ -195,7 +195,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/backof
       <div className="card p-4">
         <h2 className="text-sm font-bold text-steel uppercase">Dink (AI assistant)</h2>
         <p className="mb-3 text-xs text-steel/60">Last 30 days. Counts only; what players type is never stored.</p>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 @xl:grid-cols-4">
           <Metric label="Chats" value={dink.chats.toLocaleString()} sub={`${dink.proposed} showed court options`} />
           <Metric label="Booked from Dink" value={dink.booked.toLocaleString()} sub={`of ${dink.offered} options shown`} />
           <Metric label="Errors" value={dink.errors.toLocaleString()} sub={`${dink.limited} rate-limited`} />

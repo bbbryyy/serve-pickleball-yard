@@ -87,7 +87,7 @@ export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void;
       aria-labelledby="dink-chat-title"
       className={`fixed inset-0 z-50 flex flex-col bg-paper text-steel ${
         mode.layout === "pane"
-          ? "sm:left-auto sm:w-[min(600px,100vw)] sm:border-l sm:border-kitchen-light sm:shadow-2xl"
+          ? "lg:left-auto lg:w-(--dink-pane-w) lg:border-l lg:border-kitchen-light lg:shadow-xl"
           : "sm:inset-auto sm:right-5 sm:bottom-5 sm:h-[min(620px,calc(100dvh-2.5rem))] sm:w-[380px] sm:overflow-hidden sm:rounded-3xl sm:border sm:border-kitchen-light sm:shadow-2xl"
       }`}
     >

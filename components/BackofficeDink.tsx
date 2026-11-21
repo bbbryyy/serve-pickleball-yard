@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DinkChat, type DinkMode } from "./DinkChat";
 
 const STAFF_CHIPS = ["Today's schedule", "Waiting for payment", "Low stock", "Store sales today", "Queue for open play today"];
@@ -10,6 +11,14 @@ export function BackofficeDink({ firstName, isAdmin }: { firstName: string; isAd
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
+
+  // the page makes room for the pane on large screens (see .bo-main in globals.css)
+  useEffect(() => {
+    document.documentElement.dataset.dinkPane = open ? "open" : "";
+    return () => {
+      document.documentElement.dataset.dinkPane = "";
+    };
+  }, [open]);
 
   useEffect(() => {
     if (wasOpen.current && !open) button.current?.focus();
@@ -45,7 +54,8 @@ export function BackofficeDink({ firstName, isAdmin }: { firstName: string; isAd
         </svg>
         Ask Dink
       </button>
-      {open && <DinkChat onClose={() => setOpen(false)} mode={mode} />}
+      {/* rendered at the end of <body> so no page layer (sticky cards, the sidebar) sits above it */}
+      {open && createPortal(<DinkChat onClose={() => setOpen(false)} mode={mode} />, document.body)}
     </>
   );
 }
