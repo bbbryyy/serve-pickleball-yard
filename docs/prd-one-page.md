@@ -34,6 +34,7 @@ sales, court use or stock.
 - Email or SMS notifications; Messenger or WhatsApp channels.
 - Dink draft actions with a confirm card (walk-ins, blocks, restocks): v2.
 - Dink making or changing bookings, payments or stock itself; storing chat text.
+
 ## 5. Success metrics
 
 1. **Online share:** ≥ 30% of court bookings made online within the first month.
@@ -46,7 +47,6 @@ sales, court use or stock.
 
 ## 6. Open questions
 
-- Targets above: confirm with the owner after the interview.
 - Dink on every public page, or only `/book` first?
 - Taglish: mirror the player, or English by default?
 - Cancellation and refund policy for confirmed court bookings.
