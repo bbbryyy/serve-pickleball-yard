@@ -1,13 +1,13 @@
 # Idea validation: Serve Pickleball Yard booking app and Dink
 
-Status: draft, 2026-11-21. Interview evidence to be added today (see the placeholders marked
-`> Interview evidence:`).
+Status: updated with the owner and staff interview and the yard's logbook (November 2026). The
+first-week measurement and the hallway test in step 6 are planned for after launch.
 
 The idea: a booking, payment and store system for Serve Pickleball Yard (Santa Fe, Agoo, La Union;
 2 indoor courts; ₱400 per court-hour), with **Dink**, an AI assistant on the public site that answers
 player questions and finds free court hours, then hands the player to the normal booking form.
 
-> **5 interview questions for the owner and staff (ask today, write the answers into steps 1, 2 and 6)**
+> **5 interview questions asked to the owner and staff** (answers are quoted in steps 1, 2 and 6)
 >
 > 1. Before the app, how did a player book a court, step by step? Where did you track it (notebook,
 >    spreadsheet, Messenger, memory)?
@@ -25,26 +25,42 @@ player questions and finds free court hours, then hands the player to the normal
 ## 1. Define the problem
 
 **Problem statement.** Players who want to rent a court at Serve can't see which hours are free.
-They message the yard's page or walk in, and staff answer the same questions (is a court free on
-Saturday night, how much, how to pay) by hand and track reservations by hand. Reservations are made
-without payment, so unpaid no-shows block hours that other players wanted.
+They ask through Messenger, text, a phone call or Reclub, and staff answer the same two questions
+("how much per hour?" and "is this time slot available?") by hand, then write the reservation in a
+logbook. No reservation fee is collected, so no-shows and late cancellations cost the yard the hour.
+Store sales are also written in a logbook, and the cash doesn't always match.
 
-What this costs today:
+What this costs today (from the interview):
 
-- **Staff time** spent answering availability and price questions, often outside desk hours.
-- **Lost bookings** when a player gets no reply fast enough and plays elsewhere.
-- **Dead hours** from reservations that are never paid or shown up for.
-- **Errors** from manual tracking: double bookings and lost cancellations.
-- **No numbers** for the owner: sales, court use, busiest hours, store stock and cash differences.
+- **Staff time:** about 20 booking inquiries a week, mostly on Messenger, at about 10 minutes each:
+  roughly **3 hours and 20 minutes a week** spent answering availability and price questions.
+- **Lost hours:** a few no-shows on court reservations and cancellations on open play slots. With no
+  reservation fee, the yard receives nothing for those hours.
+- **Risk of errors:** no double booking yet, but four booking channels feed one paper logbook with no
+  central record, so the risk grows as bookings grow.
+- **Store money and stock:** sales recorded in a logbook don't always match the cash, and the owner
+  can't tell whether stock will last the week.
+- **No numbers** for the owner: sales, court use, busiest hours.
 
-Note to confirm: the draft spec says reservations were tracked in a spreadsheet; the PRD says
-bookings came by message. Use whichever the owner describes.
-
-> Interview evidence: _(owner quote on how bookings worked before, e.g. "…")_
+> Interview evidence (owner and staff, Q1): "We track it using a logbook. The players have multiple
+> ways to book: 1. Messenger 2. Text message 3. Phone call 4. Through an app named Reclub, but they
+> can't see what the available time slots are so they can pick their options."
 >
-> Interview evidence: _(staff quote on time spent answering messages, with a number per day or week)_
+> Interview evidence (Q2): "Average of 20 inquiries per week, mostly through Messenger. It takes
+> around 10 minutes per conversation. Common questions are 'how much per hour?' and 'is this time
+> slot available?'"
 >
-> Interview evidence: _(one recent no-show or double-booking example)_
+> Interview evidence (Q3): "We have a few no-shows on court reservations and cancellations on open
+> play slots. Since we don't ask for a reservation fee, we did not receive any payment. We have not
+> experienced any double booking as of now, but there is a chance due to no central database."
+>
+> Interview evidence (Q4): "We record through a logbook, and yes, sales not matching the cash
+> happens. We also don't know if our inventory is still enough for the week."
+
+**What changed after the interview.** The owner confirmed the main pain is answering the same two
+questions, not double bookings. That supports Dink's focus: answer price and availability instantly
+from live data. Holds with QR payment address the unpaid no-shows. Double booking is a risk to
+prevent, not a problem the yard has had.
 
 ## 2. Profile the target customer
 
@@ -53,10 +69,10 @@ both; Dink is aimed at the player.
 
 | | Primary: casual and regular players | Secondary: the yard (owner and front desk) |
 |---|---|---|
-| Who | Adults in Agoo and nearby towns, mostly groups of 2–4 friends or family; many new to the sport | Family owner plus a small desk team |
+| Who | Players aged 12 to 50 (logbook) in Agoo and nearby towns, in groups of friends or family; many new to the sport | Family owner plus a small desk team |
 | How they find a court | Facebook groups, Reclub, word of mouth, Messenger | — |
 | Device | Phone, GCash or Maya wallet | Phone or a laptop at the desk |
-| When they plan | Evenings and weekends, often same day ("tonight after 7?") | Busy at the same peak hours they get messages |
+| When they play | Peak on weekends, from 5PM to 10PM (logbook); often planned the same day ("tonight after 7?") | Busy at the same peak hours they get messages |
 | Job to be done | "Find a free court at a time that suits my group, and lock it in without waiting for a reply" | "Fill the courts, get paid, and stop answering the same questions" |
 | Pain | Waiting for a reply; not knowing the price or how to pay; losing the slot | Repetitive questions, unpaid holds, manual cash counts |
 | Language | English or Taglish | English or Taglish |
@@ -66,9 +82,25 @@ Court) and 259 members (Agoo Pickleball Courts), and open play is organised on R
 Union ([Reclub La Union community](https://reclub.co/communities/la-union-luzon-philippines-552)).
 These are people already used to booking and paying for play from their phones.
 
-> Interview evidence: _(staff description of a typical booker: age, group size, how they message, peak days)_
->
-> Interview evidence: _(the 3 most common questions players ask, in their words)_
+> Interview evidence (Q1, Q2): players reach the yard through four channels (Messenger, text, phone
+> call, Reclub), and **most use Messenger**. Their two most common questions are "how much per
+> hour?" and "is this time slot available?". Reclub is used, but players "can't see what the
+> available time slots are so they can pick their options."
+
+What this means for the profile: the typical booker is already on their phone in a chat app and
+wants two facts, price and a free time. Dink answers exactly those two questions in a chat, at any
+hour, and shows the free times Reclub doesn't.
+
+> Logbook evidence: players range from 12 to 50 years old. Peak days are weekends, and peak hours
+> run from 5PM to 10PM.
+
+What this means for the product: demand is concentrated in about 5 hours on 2 days, so those are
+the hours players ask about and the hours lost to no-shows hurt most. Dink's chips ("Tonight after
+7", "2 hours this Saturday") target exactly that window, and when it is full Dink offers the nearest
+free hours instead. The age range includes minors, which is one more reason Dink never asks for
+personal details.
+
+Not recorded in the logbook: usual group size.
 
 ## 3. Size the market (TAM / SAM / SOM)
 
@@ -89,13 +121,13 @@ catchment. A second view sizes the market if the app were offered to other small
 |---|---|---|---|
 | TAM | PH pickleball clubs and venues | ~277–400 clubs, plus mall chains (SM Active Hub alone runs 86 courts in 29 malls) | [PPF](https://en.wikipedia.org/wiki/Philippine_Pickleball_Federation), [IPOPHL](https://www.ipophil.gov.ph/news/pickleballs-next-shot-rules-ip-rights-and-the-road-to-the-olympics/), [SM Supermalls](https://www.smsupermalls.com/whats-new/lifestyle/sm-active-hub-leads-the-philippine-pickleball-boom-with-86-courts-nationwide) |
 | SAM | Independent 1–6 court venues that take GCash or Maya and run on Messenger | Assume half of the clubs: ~150–200 venues | Assumption |
-| SOM | Venues reachable in Northern Luzon in year 1 | 5–10 venues × ~₱1,500/month = ₱90k–₱180k a year | Assumption; price is below CourtReserve and Playtomic entry tiers |
+| SOM | Venues reachable in Northern Luzon in year 1 | 3–5 venues on the same package as Serve (₱200,000 build + ₱6,000/month): ₱600k–₱1.0M in build fees plus ₱216k–₱360k a year in maintenance | Assumption; package agreed with Serve's owner (step 6) |
 
 View B is a possible later step, not the goal of this submission.
 
 ## 4. Map the competition (gap matrix)
 
-| Need | Facebook page / Messenger | Spreadsheet or notebook | Reclub | Playtomic | CourtReserve | **Serve app + Dink** |
+| Need | Facebook page / Messenger | Logbook (what Serve used) | Reclub | Playtomic | CourtReserve | **Serve app + Dink** |
 |---|---|---|---|---|---|---|
 | Player sees free court-hours live | No | No | Open play sessions, not hourly court rental | Yes | Yes | **Yes** |
 | Answers questions at night without staff | No (waits for a reply) | No | No | No | No | **Yes (Dink)** |
@@ -104,7 +136,7 @@ View B is a possible later step, not the goal of this submission.
 | No double booking | No | No | n/a | Yes | Yes | **Yes (database rule)** |
 | Store POS and daily cash close in the same system | No | No | No | Limited | Add-on | **Yes** |
 | Taglish, PH service day (4AM–1AM) | Yes (human) | — | Partly | No | No | **Yes** |
-| Cost to the yard | Free | Free | Free for clubs; fees on payments | Subscription from ~$38/month (third-party listing) plus player service fees | From $25–$199/month depending on source and courts | **Hosting only** |
+| Cost to the yard | Free | Free | Free for clubs; fees on payments | Subscription from ~$38/month (third-party listing) plus player service fees | From $25–$199/month depending on source and courts | **₱200,000 one time + ₱6,000/month for 2 years, hosting included; the yard owns the code** |
 
 Sources: [Reclub on the App Store](https://apps.apple.com/app/id1323924315) and Reclub club pages
 showing the request-pay-upload-proof flow ([example](https://reclub.co/m/Q7951C));
@@ -149,9 +181,9 @@ handles the payment link.
 
 ## 6. Design a cheap test
 
-**Test 1: the live site itself (running now).** The booking site is live at
+**Test 1: the live site itself (planned: first week after launch).** The booking site is live at
 https://serve-pickleball-yard.vercel.app. Share the link in the yard's Facebook page and the Agoo
-groups for one week and measure:
+groups for one week, with weekend 5PM–10PM as the window to watch, and measure:
 
 | Measure | How | Pass if |
 |---|---|---|
@@ -161,19 +193,49 @@ groups for one week and measure:
 | Dink to booking | `agent_proposals` with a `booking_ref` ÷ proposals shown | ≥ 15% |
 | Cost | Tokens per conversation × model price | < ₱1 per conversation |
 
-**Test 2: the owner and staff interview (today).** Ask the 5 questions at the top. The idea passes if
-staff report answering booking questions daily and at least one no-show or double booking in the
-last month, and the owner says they would keep using it.
+**Test 2: the owner and staff interview (done).** Pass criteria: staff answer booking questions
+every week, there have been no-shows or double bookings, and the owner says they would use it.
 
-**Test 3: a 10-person hallway test.** Ask 10 players at the yard to find "2 hours this Saturday after
-6pm" using Dink on their phone, without help. Pass if 8 of 10 reach the booking form with hours
-preselected in under 2 minutes.
+| Criterion | Result | Pass? |
+|---|---|---|
+| Staff answer booking questions regularly | About 20 inquiries a week, about 10 minutes each (~3 h 20 min a week) | Yes |
+| No-shows or double bookings | A few no-shows and open play cancellations, with no payment received; no double bookings yet | Yes (no-shows); double booking is a risk only |
+| Owner would use it | "Yes, this will be helpful for us and the players." | Yes |
+| What would make them stop | "If the system has too many steps to book a court or pay rentals." | Becomes a design rule (see risk 11) |
 
-> Interview evidence: _(owner's answer to question 5: value per month and what would make them stop)_
->
-> Interview evidence: _(results of the hallway test: n of 10 succeeded, median time, what confused people)_
->
-> Interview evidence: _(first-week numbers from Reports once collected)_
+**Pricing model agreed with the owner.** The owner didn't know typical subscription prices and
+prefers a one-time development fee plus a maintenance agreement over a monthly subscription. The
+agreed package:
+
+| Term | Agreed |
+|---|---|
+| Development | ₱200,000, one time |
+| Maintenance | ₱6,000 a month for 24 months, hosting (Vercel, Supabase) and AI usage included |
+| Included support | Up to 4 hours a month of fixes, small changes, security updates and backups; new features quoted separately |
+| Response time | Within 1 day |
+| Code and data | Owned by the family business |
+| After 2 years | Renew, or hand over to a new service provider |
+| Two-year total | ₱344,000 (₱200,000 + 24 × ₱6,000) |
+
+For comparison, CourtReserve's published plans of $25–$199 a month come to about ₱35,000–₱280,000
+over 2 years, without Taglish AI answers, GCash/Maya proof checks or the store POS (step 4).
+
+Running costs are about ₱2,500–₱3,500 a month, which leaves ₱2,500–₱3,500 a month for support. If
+all 4 hours are used every month, that is about ₱625–₱875 an hour (risk 12).
+
+> Interview evidence (Q5): "Yes, this will be helpful for us and the players. [We would stop] if the
+> system has too many steps to book a court or pay rentals."
+
+**Test 3: a 10-person hallway test (planned: first weekend after launch).** Ask 10 players at the
+yard during the weekend peak to find "2 hours this Saturday after 6pm" using Dink on their phone,
+without help. Pass if 8 of 10 reach the booking form with hours preselected in under 2 minutes.
+Record how many succeeded, the median time, and what confused people.
+
+| Test | Status | Result |
+|---|---|---|
+| 1. Live site, first week | Planned | To be read from Reports and `agent_runs` after the first week |
+| 2. Owner and staff interview | Done | Passed (see the table above) |
+| 3. Hallway test | Planned | To be run on the first weekend after launch |
 
 ## 7. Stress-test the idea (risk register)
 
@@ -189,6 +251,9 @@ preselected in under 2 minutes.
 | 8 | Competition: a bigger venue or chain opens nearby with an app | Medium | Medium | Compete on location, price and service; Dink and same-day answers as a service advantage | New venue announcements in La Union groups |
 | 9 | AI provider outage | Low | Low | Panel shows a short apology and a link to `/book`; booking never depends on Dink | Error outcomes in `agent_runs` |
 | 10 | Data privacy obligations (PH Data Privacy Act) | Medium | Medium | Minimum data collected; no chat text stored; privacy notice; review before scaling | Owner decision pending |
+| 11 | Too many steps to book or pay (the owner's stated reason to stop using it) | Medium | High | Dink's "Book these hours" opens the form with hours already selected; one form (name, mobile, email); QR payment with a screenshot; no account needed | Hallway test under 8 of 10; high share of holds that expire unpaid |
+| 12 | Maintenance costs more than the fee (hosting price rises, or support uses all 4 hours every month) | Medium | Medium | Hours are a monthly cap; new features quoted separately; keep the stack on standard plans; review the fee at renewal after 2 years | Support hours or running costs above ₱3,500 a month for 3 months in a row |
+| 13 | The yard is stuck if the developer is unavailable | Low | High | The family business owns the code and data; README, `CLAUDE.md` and docs let a new provider take over; handover option at the end of the term | Response time over the 1-day agreement |
 
-**Riskiest assumption:** players will use a website instead of Messenger. Test 1 measures this
-directly in the first week.
+**Riskiest assumption:** players will use a website instead of Messenger, where most of them ask
+today (interview, Q2). Test 1 measures this directly in the first week.

@@ -18,16 +18,17 @@ are kept here so the design stays in one place and are marked _(v2)_.
 
 ### Problem
 
-Serve has had no system for booking courts or collecting payment. Players message the yard, call or
-walk in, and staff track reservations by hand (message threads and a spreadsheet; to confirm with
-the owner in today's interview). As a result:
+Serve has had no system for booking courts or collecting payment. Players ask through Messenger,
+text, a phone call or Reclub, and staff write reservations in a logbook (owner and staff interview,
+`docs/idea-validation.md` step 1). As a result:
 
-- Players can't see which hours are free without asking, and staff spend their time answering "is
-  there a court on Saturday night?"
-- Reservations are made without payment, so unpaid no-shows block hours that others wanted.
-- Manual tracking makes double bookings and lost cancellations easy.
-- Store sales are written by hand, so nobody knows the stock on hand or whether the money matches
-  what was sold.
+- Players can't see which hours are free without asking. Staff answer about 20 inquiries a week,
+  about 10 minutes each, mostly "how much per hour?" and "is this time slot available?"
+- No reservation fee is collected, so no-shows and late cancellations leave the yard unpaid.
+- Four channels feed one paper logbook with no central record. There has been no double booking
+  yet, but the risk grows with volume.
+- Store sales are written in a logbook; the cash doesn't always match, and nobody knows whether
+  stock will last the week.
 - The owner has no view of sales, court use, or the busiest hours.
 
 ### Users
@@ -592,8 +593,6 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
   booking-focused chips on `/book`.
 - Taglish: mirror the player, or English by default? Proposed: mirror.
 - After launch: Messenger first, or Dink draft actions?
-- Problem statement: were reservations tracked in a spreadsheet or only in message threads? Confirm
-  in the owner interview.
 
 ## Review log
 
@@ -611,4 +610,5 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 | 2026-11-21 | Claude Code (testing) | The course's OpenAI gateway timed out from the developer's network, so one provider was a single point of failure | Claude stays the default; an OpenAI-compatible backup was added behind `AGENT_PROVIDER`, with the same tools and limits |
 | 2026-11-21 | Owner (testing the preview) | Dink couldn't find the open play session set for next week | Added `find_open_play`, which reads sessions from the availability grid and hides ones that already ended; the prompt points open play questions to it |
 | 2026-11-21 | Owner | Dink should help staff and the owner too, and make the open play queue; the queue must be saved to the session once play starts | Read-only staff and owner modes moved from v2 to v1; added `plan_open_play_queue`, the `open_play_queues` table, Mark played / Redo the rest, and the players' view. Draft actions stay v2 |
+| 2026-11-22 | Owner and staff (validation interview) | Reservations were kept in a logbook, not a spreadsheet; about 20 inquiries a week, mostly price and availability; no double bookings yet; store cash doesn't always match; "too many steps" would make them stop | Problem statement rewritten from the interview; open question on the problem statement closed |
 | | Owner | _(add the owner's feedback after reading)_ | |

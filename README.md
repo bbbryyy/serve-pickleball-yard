@@ -23,7 +23,7 @@ Tailwind CSS 4, Zod 4, Vitest, Claude (Anthropic SDK), Vercel.
 | CI pipeline | [.github/workflows/ci.yml](.github/workflows/ci.yml): lint, typecheck, tests, gitleaks secret scan |
 | Reflection | [docs/reflection.md](docs/reflection.md) |
 | 2-minute demo | _(add the video link)_ |
-| v2 issue | _(add the GitHub issue link)_ |
+| v2 issue | [#8 Dink draft actions with a confirm card](https://github.com/bbbryyy/serve-pickleball-yard/issues/8) |
 
 **About the git history.** The base booking app was built first and saved as one snapshot commit.
 The work after that (open play, store, and everything for this assignment: validation, PRD, spec,
