@@ -86,10 +86,10 @@ Styling: Tailwind CSS 4 with the court brand colors (`docs/PRD.md` → Brand). C
 | Part | Where | What it does |
 |---|---|---|
 | Route | `app/api/agent/staff/route.ts` (POST) | 401 unless signed in (`getStaffUser()`); the role picks the tool list; 60 requests per 10 minutes per user; logs `agent_runs` with `mode` and `user_id`. |
-| Tools | `lib/agent/staffTools.ts` | `get_schedule`, `list_waiting_payments`, `get_stock`, `get_store_day`, `plan_open_play_queue`, plus the player read tools; owner adds `get_sales`, `get_store_report`, `suggest_restock`. They read with `createUserClient()`, so RLS and RPC role checks apply. |
+| Tools | `lib/agent/staffTools.ts` | `get_schedule`, `list_waiting_payments`, `get_stock`, `get_store_day`, `plan_open_play_queue`, plus the player read tools; owner adds `get_sales`, `get_store_report`, `suggest_restock`, `draft_open_play_session` (draft only; checks clashes, helpers in `lib/agent/openPlayDraft.ts`). They read with `createUserClient()`, so RLS and RPC role checks apply. |
 | Prompt | `buildStaffPrompt()` in `lib/agent/prompt.ts` | Read-only, first names only, owner-only figures, links to the right backoffice page. |
 | Shared run | `lib/agent/run.ts` | One run loop and `agent_runs` logging for both routes. |
-| UI | `components/BackofficeDink.tsx`, `DinkChat` (mode prop), `QueueCard`, `QueueTable` | Sidebar button, staff chips, queue card with "Save to session". |
+| UI | `components/BackofficeDink.tsx`, `DinkChat` (mode prop), `QueueCard`, `QueueTable` | Sidebar button, staff chips, queue card with "Save to session", owner's `OpenPlayDraftCard` with "Create session" (calls `createSessionFromDink` in `app/backoffice/open-play-actions.ts`, admin only). |
 
 **Open play queue.** `planQueue()` (`lib/agent/queue.ts`, pure) plans rounds; `lib/openPlayQueue.ts`
 loads a session's courts, paid players (first names) and saved queue and continues from played

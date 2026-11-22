@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { suggestRestock } from "./inventory";
+import { describeClashes, sessionWindowIssue } from "./openPlayDraft";
+import { DraftOpenPlayInput } from "./schemas";
 import { firstName, firstNames, gameCounts, planQueue, roundStarts, type QueueRound } from "./queue";
 
 const NAMES = ["Ann", "Ben", "Cara", "Dan", "Eli", "Fay", "Gio", "Hal", "Ivy", "Jo", "Kim"];
@@ -87,5 +89,37 @@ describe("suggestRestock", () => {
     expect(r[0]).toMatchObject({ perDay: 2, daysLeft: 3, suggest: 28 }); // 2×14 + 5 + 1 − 6
     expect(r[1]).toMatchObject({ perDay: 1, daysLeft: 30, suggest: 0 });
     expect(r[2]).toMatchObject({ daysLeft: null, low: true, suggest: 2 }); // back above the low level
+  });
+});
+
+describe("open play draft (owner Dink)", () => {
+  const at = (h: number) => new Date(Date.UTC(2026, 10, 23, h - 8)); // Manila hour h on Nov 23
+  const slots = [at(18), at(19), at(20), at(21)];
+
+  it("accepts a future window inside opening hours", () => {
+    expect(sessionWindowIssue(18, 22, slots, at(10))).toBeNull();
+  });
+
+  it("rejects an end before the start, closed hours, and a start that has passed", () => {
+    expect(sessionWindowIssue(22, 18, [], at(10))).toBe("end_before_start");
+    expect(sessionWindowIssue(18, 22, [], at(10))).toBe("closed_hours");
+    expect(sessionWindowIssue(18, 22, slots, at(18))).toBe("started");
+  });
+
+  it("groups taken hours into ranges per court", () => {
+    expect(
+      describeClashes([
+        { courtName: "Court 1", hour: 19, what: "booking SPY-7K3QXM" },
+        { courtName: "Court 1", hour: 18, what: "booking SPY-7K3QXM" },
+        { courtName: "Court 2", hour: 21, what: "blocked: repair" },
+      ]),
+    ).toEqual(["Court 1: 6PM–8PM (booking SPY-7K3QXM)", "Court 2: 9PM–10PM (blocked: repair)"]);
+  });
+
+  it("validates the tool input: courts are required, note is optional and short", () => {
+    const base = { date: "2026-11-23", from_hour: 18, to_hour: 22 };
+    expect(DraftOpenPlayInput.safeParse({ ...base, court_ids: [1, 2] }).success).toBe(true);
+    expect(DraftOpenPlayInput.safeParse({ ...base, court_ids: [] }).success).toBe(false);
+    expect(DraftOpenPlayInput.safeParse({ ...base, court_ids: [1], note: "x".repeat(121) }).success).toBe(false);
   });
 });

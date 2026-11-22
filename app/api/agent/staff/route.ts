@@ -23,7 +23,7 @@ const Body = z.object({
     .max(LIMITS.messages + 1),
 });
 
-const reply = (status: number, body: { reply: string; queue?: unknown; limited?: boolean }) => Response.json(body, { status });
+const reply = (status: number, body: { reply: string; queue?: unknown; openPlay?: unknown; limited?: boolean }) => Response.json(body, { status });
 
 export async function POST(request: Request) {
   const user = await getStaffUser();
@@ -62,5 +62,6 @@ export async function POST(request: Request) {
     ctx,
   });
   if (text === null) return reply(502, { reply: LIMIT_TEXT.error });
-  return reply(200, { reply: text, queue: ctx.queue });
+  // the draft card only reaches an admin (the tool is admin-only too)
+  return reply(200, { reply: text, queue: ctx.queue, openPlay: user.role === "admin" ? ctx.openPlayDraft : undefined });
 }

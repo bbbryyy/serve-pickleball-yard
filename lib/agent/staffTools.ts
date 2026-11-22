@@ -1,14 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
-import { salesSplit } from "../openPlay";
+import { salesSplit, sessionSlots } from "../openPlay";
 import { adjustPlayers, buildQueue, loadQueueSession } from "../openPlayQueue";
 import { getReport } from "../reports";
 import { addDays, currentServiceDate, formatHour, formatPeso, formatServiceDate, serviceSlotOf, slotStartFor, toManila } from "../schedule";
 import { getCatalog, getStoreDay } from "../storeData";
 import { suggestRestock } from "./inventory";
+import { describeClashes, MAX_SESSION_HOURS, sessionWindowIssue, type OpenPlayDraft, type TakenHour } from "./openPlayDraft";
 import { firstName, gameCounts } from "./queue";
-import { DateInput, DateRangeInput, PlanQueueInput, rangeDays, RestockInput } from "./schemas";
+import { DateInput, DateRangeInput, DraftOpenPlayInput, PlanQueueInput, rangeDays, RestockInput } from "./schemas";
 import { playerToolDefs, type RunContext, type ToolDef } from "./tools";
 
 const json = (v: unknown) => JSON.stringify(v);
@@ -37,7 +38,8 @@ type Role = "staff" | "admin";
 
 /**
  * Backoffice Dink tools. They read with the signed-in user's client, so RLS and the RPCs' role
- * checks apply. Read-only: the only write path is the queue card's Save button (a server action).
+ * checks apply. Read-only: the only write paths are buttons on cards (server actions): the queue
+ * card's "Save to session", and for the owner the open play draft card's "Create session".
  */
 export function staffToolDefs(ctx: RunContext, db: SupabaseClient, role: Role): ToolDef[] {
   const { rules, courts } = ctx.settings;
@@ -324,5 +326,75 @@ export function staffToolDefs(ctx: RunContext, db: SupabaseClient, role: Role): 
     },
   });
 
-  return [...tools, getSales, getStoreReport, restock];
+  const draftOpenPlay = defineTool({
+    name: "draft_open_play_session",
+    description:
+      "Owner only. Drafts a new open play session (date, hours, courts, optional note) and checks the courts are free. It appears as a card with a \"Create session\" button; the owner taps it to create the session. You don't create it.",
+    schema: DraftOpenPlayInput,
+    run: async ({ date, from_hour, to_hour, court_ids, note }) => {
+      used("draft_open_play_session");
+      if (date < today) return json({ error: "That date has passed." });
+      const slots = sessionSlots(date, from_hour, to_hour, rules);
+      const issue = sessionWindowIssue(from_hour, to_hour, slots, ctx.now);
+      if (issue === "end_before_start") return json({ error: "The end time must be after the start time." });
+      if (issue === "closed_hours") return json({ error: `Those hours are outside opening hours (${formatHour(rules.earlyStart)} to ${formatHour(24 + rules.closeHour)}).` });
+      if (issue === "too_long") return json({ error: `A session can be at most ${MAX_SESSION_HOURS} hours.` });
+      if (issue === "started") return json({ error: "That start time has already passed." });
+
+      const ids = [...new Set(court_ids)].sort((a, b) => a - b);
+      const picked = courts.filter((c) => ids.includes(c.id));
+      if (picked.length !== ids.length) return json({ error: "Unknown court.", courts: courts.map((c) => ({ id: c.id, name: c.name })) });
+      const nameOf = (id: number) => courts.find((c) => c.id === id)?.name ?? `Court ${id}`;
+
+      const iso = slots.map((s) => s.toISOString());
+      const [{ data: booked, error }, { data: blocked }] = await Promise.all([
+        db.from("booking_slots").select("court_id, slot_start, bookings(ref)").eq("active", true).in("court_id", ids).in("slot_start", iso),
+        db.from("blocked_slots").select("court_id, slot_start, reason, kind, session_id").in("court_id", ids).in("slot_start", iso),
+      ]);
+      if (error) return json({ error: "Couldn't check the schedule." });
+      const hourOf = (s: string) => serviceSlotOf(new Date(s), rules).sh;
+      const taken: TakenHour[] = [
+        ...(booked ?? []).map((b) => ({
+          courtName: nameOf(b.court_id),
+          hour: hourOf(b.slot_start),
+          what: `booking ${(b.bookings as unknown as { ref: string } | null)?.ref ?? ""}`.trim(),
+        })),
+        ...(blocked ?? [])
+          .filter((b) => b.kind !== "open_play" || b.session_id !== null)
+          .map((b) => ({ courtName: nameOf(b.court_id), hour: hourOf(b.slot_start), what: b.session_id ? "another open play session" : `blocked: ${b.reason}` })),
+      ];
+      if (taken.length)
+        return json({
+          error: "Some of those hours are taken, so the session can't be set up as asked.",
+          taken: describeClashes(taken),
+          tip: "Suggest other hours or courts, or the owner can free the hours in the backoffice first.",
+        });
+
+      const draft: OpenPlayDraft = {
+        date,
+        fromHour: from_hour,
+        toHour: to_hour,
+        courtIds: ids,
+        courtNames: picked.map((c) => c.name),
+        note: note ? note : null,
+        dateLabel: formatServiceDate(date),
+        hoursLabel: `${formatHour(from_hour)}–${formatHour(to_hour)}`,
+        fee: ctx.settings.openPlay.fee,
+        maxPlayers: ctx.settings.openPlay.playersPerCourt * ids.length,
+      };
+      ctx.openPlayDraft = draft;
+      return json({
+        shown_to_owner_as_card: true,
+        not_created_yet: "The owner taps Create session on the card.",
+        day: draft.dateLabel,
+        hours: draft.hoursLabel,
+        courts: draft.courtNames,
+        fee_per_player: formatPeso(draft.fee),
+        max_players: draft.maxPlayers,
+        note: draft.note,
+      });
+    },
+  });
+
+  return [...tools, getSales, getStoreReport, restock, draftOpenPlay];
 }

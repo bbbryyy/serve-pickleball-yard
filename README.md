@@ -48,7 +48,9 @@ backoffice **Analytics** page shows Dink chats, bookings that came from Dink, er
 
 **Dink in the backoffice (staff and owner, read-only).** An "Ask Dink" button in the sidebar answers
 "today's schedule", "waiting for payment", "low stock" and "store sales today". The owner also gets
-sales for any range, store profit, and restock suggestions from the last 14 days. Staff Dink sees
+sales for any range, store profit, restock suggestions from the last 14 days, and can set up open play:
+ask "set an open play session for November 23, 6PM to 10PM", answer which courts and any note, and
+tap **Create session** on the card. Staff Dink sees
 first names only and changes nothing; it links to the right page instead.
 
 **Open play queue.** Ask Dink for "queue for open play today". It plans a fair doubles rotation from

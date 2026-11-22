@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError, normalizeMobile } from "@/lib/errors";
 import { parsePlayerNames, sessionSlots } from "@/lib/openPlay";
@@ -16,14 +17,10 @@ function refresh() {
   revalidatePath("/book");
 }
 
-export async function createSession(input: {
-  date: string;
-  fromHour: number;
-  toHour: number;
-  courtIds: number[];
-  note?: string;
-}): Promise<ActionResult> {
-  await requireStaff();
+type SessionInput = { date: string; fromHour: number; toHour: number; courtIds: number[]; note?: string | null };
+
+/** Shared by the Open play screen and Dink's draft card. */
+async function insertSession(input: SessionInput): Promise<{ error: string } | { code: string; id: string }> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: "Pick a date." };
   if (input.courtIds.length === 0) return { error: "Pick at least one court." };
   const { rules } = await getSiteSettings();
@@ -38,7 +35,33 @@ export async function createSession(input: {
   if (error) return { error: friendlyError(error.message) };
   const { data: s } = await supabase.from("open_play_sessions").select("id").eq("code", code).single();
   refresh();
-  redirect(`/backoffice/open-play/${s!.id}?created=1`);
+  return { code: code as string, id: s!.id as string };
+}
+
+export async function createSession(input: SessionInput): Promise<ActionResult> {
+  await requireStaff();
+  const r = await insertSession(input);
+  if ("error" in r) return r;
+  redirect(`/backoffice/open-play/${r.id}?created=1`);
+}
+
+const DinkDraft = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  fromHour: z.number().int().min(4).max(26),
+  toHour: z.number().int().min(4).max(26),
+  courtIds: z.array(z.number().int().positive()).min(1).max(10),
+  note: z.string().trim().max(120).nullable(),
+});
+
+/** "Create session" on Dink's draft card. Owner only; the RPC re-checks the role and every hour. */
+export async function createSessionFromDink(input: unknown): Promise<ActionResult & { code?: string; sessionId?: string }> {
+  const user = await requireStaff();
+  if (user.role !== "admin") return { error: "Only the owner can set up open play from Dink." };
+  const parsed = DinkDraft.safeParse(input);
+  if (!parsed.success) return { error: "That session doesn't look right. Ask Dink to draft it again." };
+  const r = await insertSession(parsed.data);
+  if ("error" in r) return r;
+  return { ok: "Session created", code: r.code, sessionId: r.id };
 }
 
 export async function addCourt(sessionId: string, courtId: number): Promise<ActionResult> {

@@ -68,6 +68,14 @@ export const PlanQueueInput = z.object({
   walk_ins: nameList.default([]).describe("Extra players to add (first names)"),
 });
 
+export const DraftOpenPlayInput = z.object({
+  date: isoDate.describe("Service date of the session, YYYY-MM-DD"),
+  from_hour: serviceHour.describe("Start, service hour: 18 = 6PM"),
+  to_hour: serviceHour.describe("End, service hour: 22 = 10PM, 25 = 1AM"),
+  court_ids: z.array(z.number().int().positive()).min(1).max(10).describe("Court ids for the session. Ask the owner if they didn't say."),
+  note: z.string().trim().max(120).optional().describe("Optional note shown to players, in the owner's words"),
+});
+
 export const RestockInput = z.object({
   target_days: z.number().int().min(3).max(60).default(14).describe("Days of stock to cover, default 14"),
 });

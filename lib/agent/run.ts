@@ -37,7 +37,7 @@ export async function runAndLog(opts: {
     inputTokens = result.inputTokens;
     outputTokens = result.outputTokens;
     let text = result.refused ? "I can only help with courts, booking and the yard." : plainText(result.text);
-    if (!text) text = ctx.cards.length ? "Here are open courts you can book:" : ctx.queue ? "Here's the queue:" : LIMIT_TEXT.error;
+    if (!text) text = ctx.cards.length ? "Here are open courts you can book:" : ctx.queue ? "Here's the queue:" : ctx.openPlayDraft ? "Here's the session. Tap Create session to add it." : LIMIT_TEXT.error;
     const outcome = result.refused ? "declined" : ctx.cards.length ? "proposed" : ctx.sawNoOptions ? "no_options" : "answered";
     await db
       .from("agent_runs")

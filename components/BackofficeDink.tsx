@@ -31,8 +31,8 @@ export function BackofficeDink({ firstName, isAdmin }: { firstName: string; isAd
 
   const mode: DinkMode = {
     endpoint: "/api/agent/staff",
-    subtitle: isAdmin ? "For the owner · reads only, changes nothing" : "For staff · reads only, changes nothing",
-    greeting: `Hi ${firstName}! Ask me about today's schedule, payments, stock or the store${isAdmin ? ", sales and restocking" : ""}. I can also plan the open play queue.`,
+    subtitle: isAdmin ? "For the owner · can set up open play" : "For staff · reads only, changes nothing",
+    greeting: `Hi ${firstName}! Ask me about today's schedule, payments, stock or the store${isAdmin ? ", sales and restocking" : ""}. I can also plan the open play queue${isAdmin ? " and set up open play sessions" : ""}.`,
     chips: isAdmin ? [...STAFF_CHIPS, "Sales this week", "What should I restock?"] : STAFF_CHIPS,
     placeholder: "Ask about today, payments, stock…",
     thinking: "Dink is checking…",

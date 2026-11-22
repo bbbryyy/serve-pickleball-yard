@@ -52,7 +52,7 @@ AI assistant.
 | Store POS and inventory | Quick sales at the desk, stock log, low-stock alerts, daily cash/GCash/Maya close, profit | Live |
 | Reports and analytics | Sales by source and method, court use, busiest hours, store revenue and profit | Live |
 | **Dink player mode** | Answers questions, finds free hours, proposes a booking, checks booking status | **v1, this sprint** |
-| **Dink staff and owner modes** | Schedule, payments waiting, stock, store day; owner: sales, store profit, restock suggestions | **v1, read-only** |
+| **Dink staff and owner modes** | Schedule, payments waiting, stock, store day; owner: sales, store profit, restock suggestions, and drafting open play sessions the owner creates with one tap | **v1, read-only tools** |
 | **Open play queue** | Dink plans a fair doubles queue; staff save it, mark rounds, rebuild the rest; players' view | **v1** |
 | Dink draft actions | Walk-ins, blocks, restocks drafted with a confirm card | v2 (GitHub issue) |
 
@@ -396,7 +396,7 @@ never from the request. Tools read with `createUserClient()`.
 Staff mode can't approve or reject payments: staff look at the screenshot themselves on the
 bookings screen. Dink links to it instead.
 
-### Admin mode (v1, read-only)
+### Admin mode (v1, read-only tools)
 
 Everything in staff mode, plus:
 
@@ -405,6 +405,11 @@ Everything in staff mode, plus:
 | `get_sales` | Sales for a range: rentals, open play, store sales and profit, refunds, busiest hours (`report_summary`) |
 | `get_store_report` | Store revenue, cost, profit, best sellers, losses (`store_report`) |
 | `suggest_restock` | Days of stock left per shelf item from the last 14 days, and how many to buy |
+| `draft_open_play_session` | Drafts an open play session (date, hours, courts, optional note), checks the hours are free on those courts, and shows a card with "Create session". The tool writes nothing; the owner's tap calls `createSessionFromDink`, which runs `staff_create_open_play_session` (the Open play screen's RPC) |
+
+If the owner doesn't say which courts, Dink asks, and asks in the same question whether they want a
+note for players. Fee and players per court come from Settings. Staff Dink doesn't have the tool and
+the server action refuses non-admins.
 
 `suggest_restock` uses `suggestRestock()` in `lib/agent/inventory.ts`: units sold ÷ 14 = per day;
 days left = on hand ÷ per day; buy = per day × target days (default 14) + low-stock level + 1 − on
@@ -557,6 +562,15 @@ the existing server action. v2 adds an `agent_actions` table (`id`, `run_id`, `u
 - Given a session code, when anyone opens `/open-play/[code]/queue`, then they see first names only;
   anon can't read `open_play_queues` or call the queue RPCs (`npm run check:permissions`).
 
+- Given the owner asks "set an open play session for November 23, 6PM to 10PM" without courts,
+  when Dink answers, then it asks which courts and whether to add a note; once answered, a card shows
+  the date, hours, courts, fee and note, and no session exists until the owner taps "Create
+  session".
+- Given one of those hours is booked on a chosen court, when Dink drafts the session, then no card
+  is shown and Dink names the taken hours.
+- Given a staff user asks Dink to set up open play, then Dink says it's for the owner and links to
+  the Open play page.
+
 ### Staff draft actions _(v2)_
 
 - Given a staff user types "Walk-in Juan, Court 2, 7–9pm, cash", when Dink drafts it, then a confirm
@@ -611,4 +625,5 @@ A "Dink" card on Backoffice → Reports → Analytics (admin) if time allows.
 | 2026-11-21 | Owner (testing the preview) | Dink couldn't find the open play session set for next week | Added `find_open_play`, which reads sessions from the availability grid and hides ones that already ended; the prompt points open play questions to it |
 | 2026-11-21 | Owner | Dink should help staff and the owner too, and make the open play queue; the queue must be saved to the session once play starts | Read-only staff and owner modes moved from v2 to v1; added `plan_open_play_queue`, the `open_play_queues` table, Mark played / Redo the rest, and the players' view. Draft actions stay v2 |
 | 2026-11-22 | Owner and staff (validation interview) | Reservations were kept in a logbook, not a spreadsheet; about 20 inquiries a week, mostly price and availability; no double bookings yet; store cash doesn't always match; "too many steps" would make them stop | Problem statement rewritten from the interview; open question on the problem statement closed |
+| 2026-11-22 | Owner (testing the preview) | The owner wanted to set up an open play session by asking Dink instead of using the Open play screen | Added owner-only `draft_open_play_session`: Dink asks for missing courts and an optional note, then shows a card; the owner's tap on "Create session" creates it through the existing RPC. Tools stay read-only |
 | | Owner | _(add the owner's feedback after reading)_ | |

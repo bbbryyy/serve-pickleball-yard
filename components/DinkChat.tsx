@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import type { OpenPlayDraft } from "@/lib/agent/openPlayDraft";
 import type { QueueDraft } from "@/lib/agent/queue";
 import type { ProposalCard } from "@/lib/agent/tools";
 import { formatPeso } from "@/lib/schedule";
 import { Dink } from "./Dink";
+import { OpenPlayDraftCard } from "./OpenPlayDraftCard";
 import { QueueCard } from "./QueueCard";
 
-type Msg = { role: "user" | "assistant"; content: string; cards?: ProposalCard[]; queue?: QueueDraft };
+type Msg = { role: "user" | "assistant"; content: string; cards?: ProposalCard[]; queue?: QueueDraft; openPlay?: OpenPlayDraft };
 
 const MAX_CHARS = 500;
 
@@ -63,8 +65,8 @@ export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.map(({ role, content: c }) => ({ role, content: c })) }),
       });
-      const data = (await res.json()) as { reply: string; cards?: ProposalCard[]; queue?: QueueDraft; limited?: boolean };
-      setMessages([...next, { role: "assistant", content: data.reply, cards: data.cards, queue: data.queue }]);
+      const data = (await res.json()) as { reply: string; cards?: ProposalCard[]; queue?: QueueDraft; openPlay?: OpenPlayDraft; limited?: boolean };
+      setMessages([...next, { role: "assistant", content: data.reply, cards: data.cards, queue: data.queue, openPlay: data.openPlay }]);
       if (data.limited) setEnded(true);
     } catch {
       setMessages([...next, { role: "assistant", content: "Dink couldn't answer just now. Try again in a moment." }]);
@@ -115,6 +117,7 @@ export function DinkChat({ onClose, mode = PLAYER_MODE }: { onClose: () => void;
             <div key={i} className="max-w-[96%] self-start rounded-2xl rounded-bl-md border border-kitchen-light bg-white px-3 py-2 text-sm text-steel">
               <p className="whitespace-pre-line">{m.content}</p>
               {m.queue && <QueueCard draft={m.queue} />}
+              {m.openPlay && <OpenPlayDraftCard draft={m.openPlay} />}
               {m.cards && m.cards.length > 0 && (
                 <ul className="mt-2 space-y-2">
                   {m.cards.map((c, j) => (

@@ -18,6 +18,7 @@ import {
 } from "../schedule";
 import type { SiteSettings } from "../settings";
 import { createServiceClient } from "../supabase/server";
+import type { OpenPlayDraft } from "./openPlayDraft";
 import type { QueueDraft } from "./queue";
 import { findOpenPlay, findOptions, type BlockOption, type CourtGrid, type OpenPlayBlock } from "./findOptions";
 import { checkDateRange, CheckBookingInput, FindOpenPlayInput, FindOptionsInput, GetInfoInput, ProposeInput } from "./schemas";
@@ -42,6 +43,8 @@ export type RunContext = {
   sawNoOptions: boolean;
   /** staff mode: a planned open play queue to show as a card */
   queue?: QueueDraft;
+  /** owner mode: a drafted open play session to show as a card with "Create session" */
+  openPlayDraft?: OpenPlayDraft;
 };
 
 const json = (v: unknown) => JSON.stringify(v);
