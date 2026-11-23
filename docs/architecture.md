@@ -158,7 +158,7 @@ sequenceDiagram
   Player->>Panel: taps "Book these hours"
   Panel->>Player: /book?court=1&week=...&slots=...&via=proposalId
   Player->>Route: name, mobile, email in the normal form → createBooking
-  Note over Route,DB: create_booking validates again (validate_slot, unique index);<br/>agent_proposals.booking_ref is set from via
+  Note over Route,DB: create_booking validates again (validate_slot, unique index).<br/>agent_proposals.booking_ref is set from via
 ```
 
 Personal data never takes part in the Dink steps: name, mobile and email are entered only in the
